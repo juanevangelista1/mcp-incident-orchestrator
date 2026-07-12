@@ -3,7 +3,10 @@ import { z } from 'zod';
 // 1. O que a IA pode nos enviar (Input)
 export const fetchIssuesInputSchema = z.object({
 	projectSlug: z.string().describe("O nome do projeto no Sentry (ex: 'frontend-app')"),
-	environment: z.enum(['production', 'staging']).default('production'),
+	environment: z
+		.string()
+		.optional()
+		.describe('Ambiente (ex: production, staging, development). Deixe vazio para todos.'),
 	limit: z.number().min(1).max(20).default(5),
 });
 

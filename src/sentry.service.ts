@@ -29,7 +29,7 @@ export class SentryService {
 	// requisição para buscar os erros em lista - Array sem cache para pegar os erros em tempo real.
 	public async fetchRecentIssues(
 		projectSlug: string,
-		environment: string,
+		environment: string | undefined,
 		limit: number = 5,
 	): Promise<SentryIssue[]> {
 		const url = `https://sentry.io/api/0/projects/${this.organizationSlug}/${projectSlug}/issues/?query=is:unresolved+environment:${environment}&limit=${limit}`;
