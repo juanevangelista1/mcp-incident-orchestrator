@@ -1,6 +1,7 @@
 import {
 	SentryIssue,
 	SentryIssueDetails,
+	SentryIssuesSummary,
 	sentryIssueDetailsSchema,
 	sentryIssueSchema,
 } from './sentry.schema';
@@ -13,6 +14,10 @@ export class SentryService {
 
 	private detailsCache: Map<string, { data: SentryIssueDetails; expiresAt: number }> = new Map();
 	private readonly CACHE_TTL_MS = 60000;
+
+	// Cache permanente: o ID numérico de um projeto no Sentry nunca muda depois de criado,
+	// então não faz sentido esse valor expirar como o cache de detalhes de erro (TTL).
+	private readonly projectIdCache: Map<string, number> = new Map();
 
 	constructor() {
 		const token = process.env.SENTRY_AUTH_TOKEN;
@@ -30,9 +35,16 @@ export class SentryService {
 	public async fetchRecentIssues(
 		projectSlug: string,
 		environment: string | undefined,
-		limit: number = 5,
+		limit: number,
 	): Promise<SentryIssue[]> {
-		const url = `https://sentry.io/api/0/projects/${this.organizationSlug}/${projectSlug}/issues/?query=is:unresolved+environment:${environment}&limit=${limit}`;
+		// 1. Montagem Dinâmica da Query
+		let query = 'is:unresolved';
+		if (environment) {
+			query += `+environment:${environment}`;
+		}
+
+		// 2. A URL agora usa a query dinâmica
+		const url = `https://sentry.io/api/0/projects/${this.organizationSlug}/${projectSlug}/issues/?query=${query}&limit=${limit}`;
 
 		const response = await fetch(url, {
 			headers: { Authorization: `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
@@ -48,6 +60,69 @@ export class SentryService {
 			count: parseInt(issue.count, 10),
 			permalink: issue.permalink,
 		}));
+	}
+
+	// Traduz o "nome amigável" do projeto (slug) para o ID numérico interno que a API de estatísticas exige.
+	// Cache permanente: uma vez resolvido, o par slug -> id nunca precisa ser buscado de novo.
+	private async resolveProjectId(projectSlug: string): Promise<number> {
+		const cached = this.projectIdCache.get(projectSlug);
+		if (cached !== undefined) return cached;
+
+		const url = `https://sentry.io/api/0/projects/${this.organizationSlug}/${projectSlug}/`;
+		const response = await fetch(url, {
+			headers: { Authorization: `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+		});
+
+		if (!response.ok) throw new Error(`Falha ao resolver o projeto '${projectSlug}': ${response.statusText}`);
+
+		const data = await response.json();
+		const projectId = parseInt(data.id, 10);
+		this.projectIdCache.set(projectSlug, projectId);
+		return projectId;
+	}
+
+	// Quantidade de erros: usa o endpoint de estatísticas da organização (issues-count),
+	// que devolve só um número, em vez de baixar a lista inteira de issues para contá-la no nosso lado.
+	public async countIssues(projectSlug: string, environment: string | undefined): Promise<number> {
+		const projectId = await this.resolveProjectId(projectSlug);
+
+		let query = 'is:unresolved';
+		if (environment) {
+			query += `+environment:${environment}`;
+		}
+
+		const url = `https://sentry.io/api/0/organizations/${this.organizationSlug}/issues-count/?project=${projectId}&query=${encodeURIComponent(query)}`;
+		const response = await fetch(url, {
+			headers: { Authorization: `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+		});
+
+		if (!response.ok) throw new Error(`Falha na API: ${response.statusText}`);
+
+		const data = await response.json();
+		return data[query] ?? 0;
+	}
+
+	// Resumo dos erros: NÃO faz uma nova chamada de rede. Reaproveita fetchRecentIssues
+	// e apenas agrega (soma/ordena) o que já veio, evitando bater na API do Sentry duas vezes
+	// para responder a uma pergunta que é só uma "leitura diferente" do mesmo dado.
+	public async summarizeIssues(
+		projectSlug: string,
+		environment: string | undefined,
+	): Promise<SentryIssuesSummary> {
+		const issues = await this.fetchRecentIssues(projectSlug, environment, 20);
+
+		const totalOccurrences = issues.reduce((sum, issue) => sum + issue.count, 0);
+
+		const topCulprits = [...issues]
+			.sort((a, b) => b.count - a.count)
+			.slice(0, 3)
+			.map((issue) => ({ culprit: issue.culprit ?? 'Desconhecido', count: issue.count }));
+
+		return {
+			totalIssues: issues.length,
+			totalOccurrences,
+			topCulprits,
+		};
 	}
 
 	// Busca a Stack Trace de um erro específico (COM CACHE)
