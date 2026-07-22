@@ -1,0 +1,8 @@
+{
+  "name": "l3-incident-orchestrator",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ]
+}
