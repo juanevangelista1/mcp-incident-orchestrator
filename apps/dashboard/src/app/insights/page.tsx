@@ -1,6 +1,8 @@
 import { callMcpTool } from '@/lib/mcp-client';
 import { ClarityInsights } from '@/lib/mcp-types';
 import { Badge } from '@/components/ui/badge';
+
+export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default async function InsightsPage() {

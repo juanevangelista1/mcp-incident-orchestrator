@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { callMcpTool } from '@/lib/mcp-client';
 import { SentryIssueDetails } from '@/lib/mcp-types';
+
+export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default async function IssueDetailsPage({ params }: { params: Promise<{ id: string }> }) {

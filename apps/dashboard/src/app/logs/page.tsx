@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { callMcpTool } from '@/lib/mcp-client';
 import { DatadogLogEntry } from '@/lib/mcp-types';
+
+export const dynamic = 'force-dynamic';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 

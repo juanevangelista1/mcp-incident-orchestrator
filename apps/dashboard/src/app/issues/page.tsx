@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import { callMcpTool } from '@/lib/mcp-client';
 import { SentryIssue } from '@/lib/mcp-types';
+
+// Depende de uma conexão ao vivo com o MCP server — nunca pode ser pré-renderizada em
+// build time (o servidor não existe/não está acessível durante o build, ex: no Vercel).
+export const dynamic = 'force-dynamic';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 

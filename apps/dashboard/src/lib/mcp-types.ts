@@ -50,3 +50,19 @@ export interface ClarityInsights {
 	scriptErrors: number;
 	topPages: { url: string; sessions: number }[];
 }
+
+export interface AwsLogEntry {
+	id: string;
+	timestamp: string;
+	logStreamName: string;
+	message: string;
+}
+
+export interface AwsLogDetails extends AwsLogEntry {
+	tags: Record<string, string>;
+}
+
+export interface AwsLogsSummary {
+	totalEvents: number;
+	byLogStream: { logStreamName: string; count: number }[];
+}

@@ -1,28 +1,12 @@
-import { callMcpTool } from '@/lib/mcp-client';
-import { ClarityInsights, DatadogLogsSummary, SentryIssuesSummary } from '@/lib/mcp-types';
+import { getSentrySummary, getDatadogSummary, getClarityInsights } from '@/lib/mcp-summaries';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
+// Depende de uma conexão ao vivo com o MCP server — nunca pode ser pré-renderizada em
+// build time (o servidor não existe/não está acessível durante o build, ex: no Vercel).
+export const dynamic = 'force-dynamic';
+
 const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
-
-// Cada fonte é buscada de forma independente (Promise.allSettled): se o Datadog ainda não
-// estiver configurado no MCP server, a página não quebra — só mostra aquele card vazio.
-async function getSentrySummary(): Promise<SentryIssuesSummary | null> {
-	const { data } = await callMcpTool<SentryIssuesSummary>('summarize_sentry_issues', {
-		projectSlug: PROJECT_SLUG,
-	});
-	return data ?? null;
-}
-
-async function getDatadogSummary(): Promise<DatadogLogsSummary | null> {
-	const { data } = await callMcpTool<DatadogLogsSummary>('summarize_datadog_logs', {});
-	return data ?? null;
-}
-
-async function getClarityInsights(): Promise<ClarityInsights | null> {
-	const { data } = await callMcpTool<ClarityInsights>('fetch_clarity_insights', { numOfDays: 3 });
-	return data ?? null;
-}
 
 export default async function OverviewPage() {
 	const [sentryResult, datadogResult, clarityResult] = await Promise.allSettled([

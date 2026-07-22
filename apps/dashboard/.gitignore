@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# sqlite (digest diário — dado local, não deve ir pro repo)
+/data/*.db
+/data/*.db-journal
