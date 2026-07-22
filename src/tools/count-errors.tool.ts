@@ -9,15 +9,16 @@ export function registerCountErrorsTool(server: McpServer, sentryService: Sentry
 		'count_sentry_issues',
 		'Retorna apenas a quantidade de erros não resolvidos de um projeto no Sentry, sem baixar os detalhes de cada um.',
 		countIssuesInputSchema.shape,
-		async ({ projectSlug, environment }) => {
+		async ({ projectSlug, environment, route }) => {
 			try {
-				const total = await sentryService.countIssues(projectSlug, environment);
+				const total = await sentryService.countIssues(projectSlug, environment, route);
 				const envLabel = environment ? ` no ambiente ${environment}` : ' em todos os ambientes';
+				const routeLabel = route ? ` na rota '${route}'` : '';
 				return {
 					content: [
 						{
 							type: 'text',
-							text: `O projeto ${projectSlug} tem ${total} erro(s) não resolvido(s)${envLabel}.`,
+							text: `O projeto ${projectSlug} tem ${total} erro(s) não resolvido(s)${envLabel}${routeLabel}.`,
 						},
 					],
 				};

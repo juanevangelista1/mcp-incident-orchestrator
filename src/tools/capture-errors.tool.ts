@@ -15,6 +15,7 @@ export function registerCaptureErrorsTool(server: McpServer, sentryService: Sent
 					args.projectSlug,
 					args.environment,
 					args.limit,
+					args.route,
 				);
 				const report = issues
 					.map((i) => `[ID: ${i.id}] ${i.title} (Ocorrências: ${i.count})`)

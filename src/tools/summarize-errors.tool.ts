@@ -9,9 +9,9 @@ export function registerSummarizeErrorsTool(server: McpServer, sentryService: Se
 		'summarize_sentry_issues',
 		'Gera um resumo executivo dos erros não resolvidos de um projeto: total de erros, total de ocorrências e os erros mais frequentes.',
 		summarizeIssuesInputSchema.shape,
-		async ({ projectSlug, environment }) => {
+		async ({ projectSlug, environment, route }) => {
 			try {
-				const summary = await sentryService.summarizeIssues(projectSlug, environment);
+				const summary = await sentryService.summarizeIssues(projectSlug, environment, route);
 
 				const topCulpritsReport = summary.topCulprits
 					.map((c, index) => `${index + 1}. ${c.culprit} — ${c.count} ocorrências`)
