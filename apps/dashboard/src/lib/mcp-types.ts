@@ -3,10 +3,38 @@
 // ele pela rede (ver decisão de arquitetura no plano da Fase 2) — então os tipos são
 // mantidos em espelho, não compartilhados por import direto.
 
+export interface SentryIssue {
+	id: string;
+	title: string;
+	culprit: string;
+	count: number;
+	permalink: string;
+}
+
+export interface SentryIssueDetails {
+	id: string;
+	errorMessage: string;
+	stackTrace: string[];
+	tags: Record<string, string>;
+}
+
 export interface SentryIssuesSummary {
 	totalIssues: number;
 	totalOccurrences: number;
 	topCulprits: { culprit: string; count: number }[];
+}
+
+export interface DatadogLogEntry {
+	id: string;
+	timestamp: string;
+	service: string;
+	status: string;
+	message: string;
+	host: string;
+}
+
+export interface DatadogLogDetails extends DatadogLogEntry {
+	tags: Record<string, string>;
 }
 
 export interface DatadogLogsSummary {
