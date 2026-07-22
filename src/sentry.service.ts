@@ -5,15 +5,14 @@ import {
 	sentryIssueDetailsSchema,
 	sentryIssueSchema,
 } from './sentry.schema';
+import { TtlCache } from './lib/ttl-cache';
 
 export class SentryService {
 	private readonly authToken: string;
 	private readonly organizationSlug: string;
 
-	// implementação do cache - prteção contra a IA
-
-	private detailsCache: Map<string, { data: SentryIssueDetails; expiresAt: number }> = new Map();
-	private readonly CACHE_TTL_MS = 60000;
+	// Protege contra a IA repetindo a mesma consulta de detalhes em loop (rate limiting do Sentry).
+	private readonly detailsCache = new TtlCache<SentryIssueDetails>(60_000);
 
 	// Cache permanente: o ID numérico de um projeto no Sentry nunca muda depois de criado,
 	// então não faz sentido esse valor expirar como o cache de detalhes de erro (TTL).
@@ -31,7 +30,7 @@ export class SentryService {
 		this.organizationSlug = org;
 	}
 
-	// Centraliza a checagem de erro HTTP para as 4 chamadas à API do Sentry.
+	// Centraliza a checagem de erro HTTP para as chamadas à API do Sentry.
 	// 401/403 quase sempre significam "token sem os scopes certos", não um bug de código —
 	// então damos essa dica em vez de só repassar o texto genérico do Sentry.
 	private async assertOk(response: Response, context: string): Promise<void> {
@@ -46,6 +45,10 @@ export class SentryService {
 		}
 
 		throw new Error(`Falha ao ${context}: ${response.status} ${response.statusText}`);
+	}
+
+	private authHeaders(): HeadersInit {
+		return { Authorization: `Bearer ${this.authToken}`, 'Content-Type': 'application/json' };
 	}
 
 	// Montagem única da query de busca (sintaxe de search do Sentry), reaproveitada por
@@ -75,20 +78,23 @@ export class SentryService {
 		// quebrariam a URL se fossem colados sem escapar.
 		const url = `https://sentry.io/api/0/projects/${this.organizationSlug}/${projectSlug}/issues/?query=${encodeURIComponent(query)}&limit=${limit}`;
 
-		const response = await fetch(url, {
-			headers: { Authorization: `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
-		});
-
+		const response = await fetch(url, { headers: this.authHeaders() });
 		await this.assertOk(response, `buscar os erros do projeto '${projectSlug}'`);
 
 		const data = await response.json();
-		return data.map((issue: any) => ({
-			id: issue.id,
-			title: issue.title,
-			culprit: issue.culprit || 'Desconhecido',
-			count: parseInt(issue.count, 10),
-			permalink: issue.permalink,
-		}));
+
+		// Fronteira da Anti-Corruption Layer: validamos contra o schema em vez de confiar
+		// cegamente no shape do JSON. Se o Sentry mudar um campo, isso falha aqui, com uma
+		// mensagem clara, em vez de propagar `undefined` silenciosamente para a IA.
+		return sentryIssueSchema.array().parse(
+			data.map((issue: any) => ({
+				id: issue.id,
+				title: issue.title,
+				culprit: issue.culprit || 'Desconhecido',
+				count: parseInt(issue.count, 10),
+				permalink: issue.permalink,
+			})),
+		);
 	}
 
 	// Traduz o "nome amigável" do projeto (slug) para o ID numérico interno que a API de estatísticas exige.
@@ -98,10 +104,7 @@ export class SentryService {
 		if (cached !== undefined) return cached;
 
 		const url = `https://sentry.io/api/0/projects/${this.organizationSlug}/${projectSlug}/`;
-		const response = await fetch(url, {
-			headers: { Authorization: `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
-		});
-
+		const response = await fetch(url, { headers: this.authHeaders() });
 		await this.assertOk(response, `resolver o projeto '${projectSlug}'`);
 
 		const data = await response.json();
@@ -121,10 +124,7 @@ export class SentryService {
 		const query = this.buildIssuesQuery(environment, route);
 
 		const url = `https://sentry.io/api/0/organizations/${this.organizationSlug}/issues-count/?project=${projectId}&query=${encodeURIComponent(query)}`;
-		const response = await fetch(url, {
-			headers: { Authorization: `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
-		});
-
+		const response = await fetch(url, { headers: this.authHeaders() });
 		await this.assertOk(response, `contar os erros do projeto '${projectSlug}'`);
 
 		const data = await response.json();
@@ -146,33 +146,22 @@ export class SentryService {
 		const topCulprits = [...issues]
 			.sort((a, b) => b.count - a.count)
 			.slice(0, 3)
-			.map((issue) => ({ culprit: issue.culprit ?? 'Desconhecido', count: issue.count }));
+			.map((issue) => ({ culprit: issue.culprit, count: issue.count }));
 
-		return {
-			totalIssues: issues.length,
-			totalOccurrences,
-			topCulprits,
-		};
+		return { totalIssues: issues.length, totalOccurrences, topCulprits };
 	}
 
 	// Busca a Stack Trace de um erro específico (COM CACHE)
 	public async fetchIssueDetails(issueId: string): Promise<SentryIssueDetails> {
-		const now = Date.now();
-		const cachedItem = this.detailsCache.get(issueId);
-
-		// 1. Verifica se temos no Cache e se ainda é válido (Rate Limiting Protection)
-		if (cachedItem && cachedItem.expiresAt > now) {
+		const cached = this.detailsCache.get(issueId);
+		if (cached) {
 			console.error(`[CACHE HIT] Retornando detalhes do erro ${issueId} da memória.`);
-			return cachedItem.data;
+			return cached;
 		}
 
-		// 2. Se não tem no cache, busca na internet
 		console.error(`[CACHE MISS] Buscando erro ${issueId} na API do Sentry.`);
 		const url = `https://sentry.io/api/0/issues/${issueId}/events/latest/`;
-		const response = await fetch(url, {
-			headers: { Authorization: `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
-		});
-
+		const response = await fetch(url, { headers: this.authHeaders() });
 		await this.assertOk(response, `buscar os detalhes do erro '${issueId}'`);
 
 		const data = await response.json();
@@ -187,16 +176,14 @@ export class SentryService {
 			stackTraceLines.unshift('... [STACK TRACE TRUNCADA] ...');
 		}
 
-		const result: SentryIssueDetails = {
+		const result = sentryIssueDetailsSchema.parse({
 			id: data.id,
 			errorMessage: data.metadata?.value || data.title || 'Erro desconhecido',
 			stackTrace: stackTraceLines,
 			tags: data.tags?.reduce((acc: any, tag: any) => ({ ...acc, [tag.key]: tag.value }), {}) || {},
-		};
+		});
 
-		// 3. Salva no Cache para as próximas chamadas da IA
-		this.detailsCache.set(issueId, { data: result, expiresAt: now + this.CACHE_TTL_MS });
-
+		this.detailsCache.set(issueId, result);
 		return result;
 	}
 }

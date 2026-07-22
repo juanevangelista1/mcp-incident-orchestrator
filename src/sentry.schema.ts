@@ -35,7 +35,7 @@ export const summarizeIssuesInputSchema = baseIssueQuerySchema;
 export const sentryIssueSchema = z.object({
 	id: z.string(),
 	title: z.string(),
-	culprit: z.string().nullable(),
+	culprit: z.string(), // nunca é null: o service já substitui por 'Desconhecido' antes de chegar aqui
 	count: z.number(),
 	permalink: z.string().url(),
 });
