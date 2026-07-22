@@ -10,8 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.22",
+    "@ai-sdk/react": "^4.0.38",
     "@base-ui/react": "^1.6.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "ai": "^7.0.35",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.25.0",

@@ -5,6 +5,7 @@ const links = [
 	{ href: '/issues', label: 'Issues (Sentry)' },
 	{ href: '/logs', label: 'Logs (Datadog)' },
 	{ href: '/insights', label: 'Insights (Clarity)' },
+	{ href: '/chat', label: 'Chat' },
 ];
 
 export function Nav() {
