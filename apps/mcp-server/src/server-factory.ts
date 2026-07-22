@@ -34,21 +34,21 @@ export function createServices(): OrchestratorServices {
 	try {
 		datadog = new DatadogService();
 	} catch (error: any) {
-		console.error(`[Datadog] Plugins desabilitados: ${error.message}`);
+		console.error(`[Datadog] Plugin opcional não configurado (${error.message}) — tools do Datadog ficam de fora.`);
 	}
 
 	let clarity: ClarityService | undefined;
 	try {
 		clarity = new ClarityService();
 	} catch (error: any) {
-		console.error(`[Clarity] Plugin desabilitado: ${error.message}`);
+		console.error(`[Clarity] Plugin opcional não configurado (${error.message}) — tools do Clarity ficam de fora.`);
 	}
 
 	let aws: AwsCloudWatchService | undefined;
 	try {
 		aws = new AwsCloudWatchService();
 	} catch (error: any) {
-		console.error(`[AWS] Plugin desabilitado: ${error.message}`);
+		console.error(`[AWS] Plugin opcional não configurado (${error.message}) — tools do CloudWatch ficam de fora.`);
 	}
 
 	return { sentry, datadog, clarity, aws };
