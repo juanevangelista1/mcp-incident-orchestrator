@@ -16,6 +16,21 @@ export interface SentryIssueDetails {
 	errorMessage: string;
 	stackTrace: string[];
 	tags: Record<string, string>;
+	context: {
+		browser?: string;
+		os?: string;
+		device?: string;
+		locale?: string;
+		timezone?: string;
+		location?: string;
+	};
+	request?: {
+		url?: string;
+		method?: string;
+		userAgent?: string;
+		referer?: string;
+	};
+	breadcrumbs: { timestamp: string; category: string; level: string; description: string }[];
 }
 
 export interface SentryIssuesSummary {

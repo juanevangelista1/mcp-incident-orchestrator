@@ -186,14 +186,67 @@ export class SentryService {
 			stackTraceLines.unshift('... [STACK TRACE TRUNCADA] ...');
 		}
 
+		const contexts = data.contexts || {};
+		const geo = data.user?.geo;
+		const requestEntry = data.entries?.find((e: any) => e.type === 'request')?.data;
+		const requestHeaders: [string, string][] = requestEntry?.headers || [];
+		const getHeader = (name: string) =>
+			requestHeaders.find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1];
+
+		const breadcrumbs = ((data.entries?.find((e: any) => e.type === 'breadcrumbs')?.data?.values ||
+			[]) as any[])
+			.slice(-15)
+			.map((b) => ({
+				timestamp: b.timestamp ?? 'desconhecido',
+				category: b.category ?? 'desconhecido',
+				level: b.level ?? 'info',
+				description: describeBreadcrumb(b),
+			}));
+
 		const result = sentryIssueDetailsSchema.parse({
 			id: data.id,
 			errorMessage: data.metadata?.value || data.title || 'Erro desconhecido',
 			stackTrace: stackTraceLines,
 			tags: data.tags?.reduce((acc: any, tag: any) => ({ ...acc, [tag.key]: tag.value }), {}) || {},
+			context: {
+				browser: contexts.browser ? `${contexts.browser.name} ${contexts.browser.version}` : undefined,
+				os: contexts.os ? `${contexts.os.name} ${contexts.os.version}` : undefined,
+				device: contexts.device
+					? [contexts.device.brand, contexts.device.family, contexts.device.model]
+							.filter(Boolean)
+							.join(' ')
+					: undefined,
+				locale: contexts.culture?.locale,
+				timezone: contexts.culture?.timezone,
+				location: geo ? [geo.city, geo.region, geo.country_code].filter(Boolean).join(', ') : undefined,
+			},
+			request: requestEntry
+				? {
+						url: requestEntry.url ?? undefined,
+						method: requestEntry.method ?? undefined,
+						userAgent: getHeader('User-Agent'),
+						referer: getHeader('Referer'),
+					}
+				: undefined,
+			breadcrumbs,
 		});
 
 		this.detailsCache.set(issueId, result);
 		return result;
 	}
+}
+
+// Cada categoria de breadcrumb do Sentry guarda os dados relevantes num formato diferente
+// (fetch/xhr tem method+url+status, navigation tem from/to, console só tem message) — esta
+// função centraliza a tradução para uma única linha legível, igual à coluna "Description"
+// que a própria UI do Sentry mostra na timeline de breadcrumbs.
+function describeBreadcrumb(breadcrumb: any): string {
+	const data = breadcrumb.data || {};
+	if (breadcrumb.category === 'navigation' && (data.from || data.to)) {
+		return `${data.from ?? '?'} → ${data.to ?? '?'}`;
+	}
+	if (data.method && data.url) {
+		return `${data.method} ${data.url}${data.status_code ? ` [${data.status_code}]` : ''}`;
+	}
+	return breadcrumb.message || breadcrumb.category || 'Evento sem descrição';
 }

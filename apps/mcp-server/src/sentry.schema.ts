@@ -50,11 +50,37 @@ export const sentryIssueSchema = z.object({
 	permalink: z.string().url(),
 });
 
+// Espelha o que a própria UI do Sentry mostra na tela de detalhe de um erro
+// (Contexts/HTTP Request/Breadcrumbs), extraído de contexts/entries do evento bruto.
 export const sentryIssueDetailsSchema = z.object({
 	id: z.string(),
 	errorMessage: z.string(),
 	stackTrace: z.array(z.string()),
 	tags: z.record(z.string(), z.string()),
+	context: z.object({
+		browser: z.string().optional(),
+		os: z.string().optional(),
+		device: z.string().optional(),
+		locale: z.string().optional(),
+		timezone: z.string().optional(),
+		location: z.string().optional(),
+	}),
+	request: z
+		.object({
+			url: z.string().optional(),
+			method: z.string().optional(),
+			userAgent: z.string().optional(),
+			referer: z.string().optional(),
+		})
+		.optional(),
+	breadcrumbs: z.array(
+		z.object({
+			timestamp: z.string(),
+			category: z.string(),
+			level: z.string(),
+			description: z.string(),
+		}),
+	),
 });
 
 export const sentryIssuesSummarySchema = z.object({
