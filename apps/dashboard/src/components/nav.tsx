@@ -9,7 +9,6 @@ const links = [
 	{ href: '/', label: 'Overview' },
 	{ href: '/issues', label: 'Issues (Sentry)' },
 	{ href: '/logs', label: 'Logs (Datadog)' },
-	{ href: '/aws', label: 'Logs (AWS)' },
 	{ href: '/insights', label: 'Insights (Clarity)' },
 	{ href: '/reports', label: 'Relatórios' },
 	{ href: '/chat', label: 'Chat' },

@@ -20,7 +20,7 @@ export default async function ReportsPage() {
 					title="Relatórios diários"
 					subtitle={
 						<p className="text-muted-foreground text-sm">
-							Histórico gerado por <code>/api/cron/daily-digest</code> — Sentry, Datadog, Clarity e AWS.
+							Histórico gerado por <code>/api/cron/daily-digest</code> — Sentry, Datadog e Clarity.
 						</p>
 					}
 				/>
@@ -53,9 +53,6 @@ export default async function ReportsPage() {
 									</Badge>
 									<Badge className="bg-violet-600/10 text-violet-600 dark:text-violet-400">
 										Datadog: {report.datadogCount ?? 'indisponível'}
-									</Badge>
-									<Badge className="bg-amber-600/10 text-amber-600 dark:text-amber-400">
-										AWS: {report.awsCount ?? 'indisponível'}
 									</Badge>
 									<Badge className="bg-sky-600/10 text-sky-600 dark:text-sky-400">
 										Clarity: {report.claritySessions ?? 'indisponível'}
