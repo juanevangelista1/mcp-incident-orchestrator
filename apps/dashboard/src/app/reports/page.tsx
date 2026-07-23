@@ -10,10 +10,10 @@ export default async function ReportsPage() {
 	const reports = listDailyReports();
 
 	return (
-		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-8">
-			<header className="flex items-start justify-between gap-4">
+		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
+			<header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 				<div>
-					<h1 className="text-2xl font-semibold">Relatórios diários</h1>
+					<h1 className="text-xl font-semibold sm:text-2xl">Relatórios diários</h1>
 					<p className="text-muted-foreground text-sm">
 						Histórico gerado por <code>/api/cron/daily-digest</code> — Sentry, Datadog, Clarity e AWS.
 					</p>
@@ -21,7 +21,7 @@ export default async function ReportsPage() {
 				{reports.length > 0 && (
 					<a
 						href="/api/export/reports"
-						className="shrink-0 rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+						className="shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
 					>
 						Baixar CSV
 					</a>

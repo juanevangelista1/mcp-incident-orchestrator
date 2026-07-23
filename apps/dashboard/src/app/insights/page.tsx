@@ -17,9 +17,9 @@ export default async function InsightsPage() {
 	}
 
 	return (
-		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-8">
+		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
 			<header>
-				<h1 className="text-2xl font-semibold">Insights — Microsoft Clarity</h1>
+				<h1 className="text-xl font-semibold sm:text-2xl">Insights — Microsoft Clarity</h1>
 				<p className="text-muted-foreground text-sm">Últimos 3 dias</p>
 			</header>
 
@@ -31,25 +31,25 @@ export default async function InsightsPage() {
 						<Card size="sm">
 							<CardHeader>
 								<CardDescription>Sessões</CardDescription>
-								<CardTitle className="text-3xl">{data.totalSessions}</CardTitle>
+								<CardTitle className="text-2xl sm:text-3xl">{data.totalSessions}</CardTitle>
 							</CardHeader>
 						</Card>
 						<Card size="sm">
 							<CardHeader>
 								<CardDescription>Rage clicks</CardDescription>
-								<CardTitle className="text-3xl">{data.rageClicks}</CardTitle>
+								<CardTitle className="text-2xl sm:text-3xl">{data.rageClicks}</CardTitle>
 							</CardHeader>
 						</Card>
 						<Card size="sm">
 							<CardHeader>
 								<CardDescription>Dead clicks</CardDescription>
-								<CardTitle className="text-3xl">{data.deadClicks}</CardTitle>
+								<CardTitle className="text-2xl sm:text-3xl">{data.deadClicks}</CardTitle>
 							</CardHeader>
 						</Card>
 						<Card size="sm">
 							<CardHeader>
 								<CardDescription>Erros de script</CardDescription>
-								<CardTitle className="text-3xl">{data.scriptErrors}</CardTitle>
+								<CardTitle className="text-2xl sm:text-3xl">{data.scriptErrors}</CardTitle>
 							</CardHeader>
 						</Card>
 					</section>

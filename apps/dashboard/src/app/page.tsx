@@ -20,9 +20,9 @@ export default async function OverviewPage() {
 	const clarity = clarityResult.status === 'fulfilled' ? clarityResult.value : null;
 
 	return (
-		<main className="mx-auto flex max-w-5xl flex-col gap-8 p-8">
+		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:gap-8 sm:p-8">
 			<header>
-				<h1 className="text-2xl font-semibold">Incident Orchestrator — Overview</h1>
+				<h1 className="text-xl font-semibold sm:text-2xl">Incident Orchestrator — Overview</h1>
 				<p className="text-muted-foreground text-sm">
 					Sentry, Datadog e Clarity via MCP · projeto{' '}
 					<Badge variant="outline">{PROJECT_SLUG || 'não configurado'}</Badge>
@@ -101,8 +101,8 @@ function KpiCard({ label, value, unavailable }: { label: string; value?: number;
 		<Card size="sm">
 			<CardHeader>
 				<CardDescription>{label}</CardDescription>
-				<CardTitle className="text-3xl">
-					{unavailable ? <span className="text-muted-foreground text-base">indisponível</span> : (value ?? '—')}
+				<CardTitle className="text-2xl sm:text-3xl">
+					{unavailable ? <span className="text-muted-foreground text-sm sm:text-base">indisponível</span> : (value ?? '—')}
 				</CardTitle>
 			</CardHeader>
 		</Card>

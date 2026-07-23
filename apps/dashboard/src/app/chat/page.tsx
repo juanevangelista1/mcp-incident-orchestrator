@@ -16,9 +16,9 @@ export default function ChatPage() {
 	}
 
 	return (
-		<main className="mx-auto flex max-w-3xl flex-1 flex-col gap-4 p-8">
+		<main className="mx-auto flex max-w-3xl flex-1 flex-col gap-4 p-4 sm:p-8">
 			<header>
-				<h1 className="text-2xl font-semibold">Chat — Incident Orchestrator</h1>
+				<h1 className="text-xl font-semibold sm:text-2xl">Chat — Incident Orchestrator</h1>
 				<p className="text-muted-foreground text-sm">
 					Pergunte sobre erros, logs ou comportamento de usuários. Ex: &quot;quantos erros tivemos hoje?&quot;,
 					&quot;resuma o que aconteceu na aplicação&quot;.

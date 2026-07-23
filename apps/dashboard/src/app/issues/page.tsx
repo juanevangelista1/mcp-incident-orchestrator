@@ -6,6 +6,7 @@ import { SentryIssue } from '@/lib/mcp-types';
 // build time (o servidor não existe/não está acessível durante o build, ex: no Vercel).
 export const dynamic = 'force-dynamic';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FilterForm } from '@/components/filter-form';
 import { toQueryString } from '@/lib/query-string';
@@ -35,8 +36,8 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 	}
 
 	return (
-		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-8">
-			<header className="flex items-start justify-between gap-4">
+		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
+			<header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 				<div>
 					<h1 className="text-2xl font-semibold">Issues — Sentry</h1>
 					<p className="text-muted-foreground text-sm">
@@ -45,7 +46,7 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 				</div>
 				<a
 					href={`/api/export/issues${toQueryString({ environment, route, startDate, endDate })}`}
-					className="shrink-0 rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+					className="shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
 				>
 					Baixar CSV
 				</a>
@@ -65,30 +66,52 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 			{issues.length === 0 ? (
 				<p className="text-muted-foreground text-sm">{emptyMessage}</p>
 			) : (
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Título</TableHead>
-							<TableHead>Rota / Culprit</TableHead>
-							<TableHead className="text-right">Ocorrências</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
+				<>
+					{/* Mobile: cards (uma coluna densa de tabela não cabe bem numa tela pequena). */}
+					<div className="flex flex-col gap-3 md:hidden">
 						{issues.map((issue) => (
-							<TableRow key={issue.id}>
-								<TableCell className="max-w-md truncate">
-									<Link href={`/issues/${issue.id}`} className="hover:underline">
+							<Card key={issue.id}>
+								<CardContent className="flex flex-col gap-2">
+									<Link href={`/issues/${issue.id}`} className="text-sm font-medium hover:underline">
 										{issue.title}
 									</Link>
-								</TableCell>
-								<TableCell className="text-muted-foreground max-w-xs truncate">{issue.culprit}</TableCell>
-								<TableCell className="text-right">
-									<Badge variant="secondary">{issue.count}</Badge>
-								</TableCell>
-							</TableRow>
+									<div className="flex items-center justify-between gap-2">
+										<span className="text-muted-foreground truncate text-xs">{issue.culprit}</span>
+										<Badge variant="secondary">{issue.count}</Badge>
+									</div>
+								</CardContent>
+							</Card>
 						))}
-					</TableBody>
-				</Table>
+					</div>
+
+					{/* Desktop: tabela de verdade, com scroll horizontal como rede de segurança. */}
+					<div className="hidden overflow-x-auto md:block">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Título</TableHead>
+									<TableHead>Rota / Culprit</TableHead>
+									<TableHead className="text-right">Ocorrências</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{issues.map((issue) => (
+									<TableRow key={issue.id}>
+										<TableCell className="max-w-md truncate">
+											<Link href={`/issues/${issue.id}`} className="hover:underline">
+												{issue.title}
+											</Link>
+										</TableCell>
+										<TableCell className="text-muted-foreground max-w-xs truncate">{issue.culprit}</TableCell>
+										<TableCell className="text-right">
+											<Badge variant="secondary">{issue.count}</Badge>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+				</>
 			)}
 		</main>
 	);

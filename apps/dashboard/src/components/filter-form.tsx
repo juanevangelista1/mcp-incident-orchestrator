@@ -20,25 +20,35 @@ export function FilterForm({
 	const hasActiveFilter = Object.values(values).some(Boolean);
 
 	return (
-		<form method="get" action={action} className="flex flex-wrap items-end gap-3 rounded-lg border p-4">
+		<form
+			method="get"
+			action={action}
+			className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4 sm:flex sm:flex-wrap sm:items-end"
+		>
 			{fields.map((field) => (
-				<label key={field.name} className="flex flex-col gap-1 text-xs">
+				<label key={field.name} className="col-span-2 flex flex-col gap-1 text-xs sm:col-span-1">
 					<span className="text-muted-foreground">{field.label}</span>
 					<input
 						type={field.type}
 						name={field.name}
 						defaultValue={values[field.name] ?? ''}
 						placeholder={field.placeholder}
-						className="rounded-md border px-2 py-1.5 text-sm"
+						className="w-full rounded-md border px-2 py-1.5 text-sm sm:w-auto"
 					/>
 				</label>
 			))}
-			<div className="flex gap-2">
-				<button type="submit" className="rounded-md bg-primary px-4 py-1.5 text-sm text-primary-foreground">
+			<div className="col-span-2 flex gap-2 sm:col-span-1">
+				<button
+					type="submit"
+					className="flex-1 rounded-md bg-primary px-4 py-1.5 text-sm text-primary-foreground sm:flex-none"
+				>
 					Filtrar
 				</button>
 				{hasActiveFilter && (
-					<a href={action} className="text-muted-foreground px-2 py-1.5 text-sm hover:underline">
+					<a
+						href={action}
+						className="text-muted-foreground flex items-center px-2 py-1.5 text-sm hover:underline"
+					>
 						Limpar
 					</a>
 				)}
