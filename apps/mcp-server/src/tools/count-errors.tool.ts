@@ -14,9 +14,10 @@ export function registerCountErrorsTool(server: McpServer, sentryService: Sentry
 			outputSchema: countIssuesOutputSchema.shape,
 			annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
 		},
-		async ({ projectSlug, environment, route }) => {
+		async (args) => {
 			try {
-				const total = await sentryService.countIssues(projectSlug, environment, route);
+				const { projectSlug, environment, route } = args;
+				const total = await sentryService.countIssues(projectSlug, args);
 				const envLabel = environment ? ` no ambiente ${environment}` : ' em todos os ambientes';
 				const routeLabel = route ? ` na rota '${route}'` : '';
 				return {

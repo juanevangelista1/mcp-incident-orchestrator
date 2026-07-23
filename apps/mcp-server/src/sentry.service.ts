@@ -7,6 +7,13 @@ import {
 } from './sentry.schema';
 import { TtlCache } from './lib/ttl-cache';
 
+export interface IssuesQueryParams {
+	environment?: string;
+	route?: string;
+	startDate?: string;
+	endDate?: string;
+}
+
 export class SentryService {
 	private readonly authToken: string;
 	private readonly organizationSlug: string;
@@ -53,26 +60,37 @@ export class SentryService {
 
 	// Montagem única da query de busca (sintaxe de search do Sentry), reaproveitada por
 	// fetchRecentIssues, countIssues e (indiretamente) summarizeIssues. O wildcard `*` no `url`
-	// permite buscar por um trecho da rota sem saber a URL inteira.
-	private buildIssuesQuery(environment: string | undefined, route: string | undefined): string {
-		let query = 'is:unresolved';
-		if (environment) {
-			query += `+environment:${environment}`;
+	// permite buscar por um trecho da rota sem saber a URL inteira. O filtro de data usa
+	// `firstSeen`, não `lastSeen`: queremos "erros que surgiram nesse período", que é o que
+	// um filtro de data num dashboard de incidentes normalmente significa.
+	//
+	// Os tokens são unidos por espaço, não por "+": a query inteira passa por
+	// encodeURIComponent (um "+" literal viraria %2B, que o Sentry decodifica de volta como
+	// "+" dentro do valor — não como separador — e quebra o parser com 400 Bad Request).
+	private buildIssuesQuery(params: IssuesQueryParams): string {
+		const tokens = ['is:unresolved'];
+		if (params.environment) {
+			tokens.push(`environment:${params.environment}`);
 		}
-		if (route) {
-			query += `+url:*${route}*`;
+		if (params.route) {
+			tokens.push(`url:*${params.route}*`);
 		}
-		return query;
+		if (params.startDate) {
+			tokens.push(`firstSeen:>=${params.startDate}`);
+		}
+		if (params.endDate) {
+			tokens.push(`firstSeen:<=${params.endDate}`);
+		}
+		return tokens.join(' ');
 	}
 
 	// requisição para buscar os erros em lista - Array sem cache para pegar os erros em tempo real.
 	public async fetchRecentIssues(
 		projectSlug: string,
-		environment: string | undefined,
+		params: IssuesQueryParams,
 		limit: number,
-		route?: string,
 	): Promise<SentryIssue[]> {
-		const query = this.buildIssuesQuery(environment, route);
+		const query = this.buildIssuesQuery(params);
 
 		// A query precisa ser URL-encoded: o wildcard "*" e caracteres com acento (ex: "visita")
 		// quebrariam a URL se fossem colados sem escapar.
@@ -115,13 +133,9 @@ export class SentryService {
 
 	// Quantidade de erros: usa o endpoint de estatísticas da organização (issues-count),
 	// que devolve só um número, em vez de baixar a lista inteira de issues para contá-la no nosso lado.
-	public async countIssues(
-		projectSlug: string,
-		environment: string | undefined,
-		route?: string,
-	): Promise<number> {
+	public async countIssues(projectSlug: string, params: IssuesQueryParams): Promise<number> {
 		const projectId = await this.resolveProjectId(projectSlug);
-		const query = this.buildIssuesQuery(environment, route);
+		const query = this.buildIssuesQuery(params);
 
 		const url = `https://sentry.io/api/0/organizations/${this.organizationSlug}/issues-count/?project=${projectId}&query=${encodeURIComponent(query)}`;
 		const response = await fetch(url, { headers: this.authHeaders() });
@@ -134,12 +148,8 @@ export class SentryService {
 	// Resumo dos erros: NÃO faz uma nova chamada de rede. Reaproveita fetchRecentIssues
 	// e apenas agrega (soma/ordena) o que já veio, evitando bater na API do Sentry duas vezes
 	// para responder a uma pergunta que é só uma "leitura diferente" do mesmo dado.
-	public async summarizeIssues(
-		projectSlug: string,
-		environment: string | undefined,
-		route?: string,
-	): Promise<SentryIssuesSummary> {
-		const issues = await this.fetchRecentIssues(projectSlug, environment, 20, route);
+	public async summarizeIssues(projectSlug: string, params: IssuesQueryParams): Promise<SentryIssuesSummary> {
+		const issues = await this.fetchRecentIssues(projectSlug, params, 20);
 
 		const totalOccurrences = issues.reduce((sum, issue) => sum + issue.count, 0);
 

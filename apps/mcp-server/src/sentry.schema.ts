@@ -15,6 +15,14 @@ const baseIssueQuerySchema = z.object({
 		.describe(
 			"Filtra por um trecho da URL/rota onde o erro ocorreu (ex: 'agendamento-visita'). Busca parcial, não precisa ser a URL completa.",
 		),
+	startDate: z
+		.string()
+		.optional()
+		.describe('Data inicial (formato AAAA-MM-DD) para filtrar erros vistos a partir dela. Deixe vazio para não filtrar por data.'),
+	endDate: z
+		.string()
+		.optional()
+		.describe('Data final (formato AAAA-MM-DD) para filtrar erros vistos até ela. Deixe vazio para usar o momento atual.'),
 });
 
 // 1. O que a IA pode nos enviar (Input)

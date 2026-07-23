@@ -14,9 +14,10 @@ export function registerSummarizeErrorsTool(server: McpServer, sentryService: Se
 			outputSchema: sentryIssuesSummarySchema.shape,
 			annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
 		},
-		async ({ projectSlug, environment, route }) => {
+		async (args) => {
 			try {
-				const summary = await sentryService.summarizeIssues(projectSlug, environment, route);
+				const { projectSlug } = args;
+				const summary = await sentryService.summarizeIssues(projectSlug, args);
 
 				const topCulpritsReport = summary.topCulprits
 					.map((c, index) => `${index + 1}. ${c.culprit} — ${c.count} ocorrências`)
