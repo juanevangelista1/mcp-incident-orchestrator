@@ -29,7 +29,7 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 			route,
 			startDate,
 			endDate,
-			limit: 20,
+			limit: 100,
 		});
 		issues = data?.issues ?? [];
 		emptyMessage = text || emptyMessage;

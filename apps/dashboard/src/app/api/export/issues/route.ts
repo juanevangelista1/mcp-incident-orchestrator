@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 		route: searchParams.get('route') ?? undefined,
 		startDate: searchParams.get('startDate') ?? undefined,
 		endDate: searchParams.get('endDate') ?? undefined,
-		limit: 20,
+		limit: 100,
 	});
 
 	const csv = toCsv(data?.issues ?? [], ['id', 'title', 'culprit', 'count', 'permalink']);

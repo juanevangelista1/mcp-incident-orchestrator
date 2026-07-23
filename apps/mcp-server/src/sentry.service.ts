@@ -149,7 +149,7 @@ export class SentryService {
 	// e apenas agrega (soma/ordena) o que já veio, evitando bater na API do Sentry duas vezes
 	// para responder a uma pergunta que é só uma "leitura diferente" do mesmo dado.
 	public async summarizeIssues(projectSlug: string, params: IssuesQueryParams): Promise<SentryIssuesSummary> {
-		const issues = await this.fetchRecentIssues(projectSlug, params, 20);
+		const issues = await this.fetchRecentIssues(projectSlug, params, 100);
 
 		const totalOccurrences = issues.reduce((sum, issue) => sum + issue.count, 0);
 

@@ -27,7 +27,9 @@ const baseIssueQuerySchema = z.object({
 
 // 1. O que a IA pode nos enviar (Input)
 export const fetchIssuesInputSchema = baseIssueQuerySchema.extend({
-	limit: z.number().min(1).max(20).default(5),
+	// 100 é o teto real de página do endpoint de issues do Sentry — pedir mais que isso
+	// exigiria paginação (cursor), que não faz sentido para o caso de uso atual (chat/dashboard).
+	limit: z.number().min(1).max(100).default(5),
 });
 
 export const fetchIssueDetailsInputSchema = z.object({
