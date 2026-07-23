@@ -7,15 +7,24 @@ import { SentryIssue } from '@/lib/mcp-types';
 export const dynamic = 'force-dynamic';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { FilterForm } from '@/components/filter-form';
 
 const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
 
-export default async function IssuesPage() {
+type SearchParams = Promise<{ environment?: string; route?: string; startDate?: string; endDate?: string }>;
+
+export default async function IssuesPage({ searchParams }: { searchParams: SearchParams }) {
+	const { environment, route, startDate, endDate } = await searchParams;
+
 	let issues: SentryIssue[] = [];
-	let emptyMessage = 'Nenhum erro encontrado.';
+	let emptyMessage = 'Nenhum erro encontrado para esse filtro.';
 	try {
 		const { data, text } = await callMcpTool<{ issues: SentryIssue[] }>('fetch_sentry_issues', {
 			projectSlug: PROJECT_SLUG,
+			environment,
+			route,
+			startDate,
+			endDate,
 			limit: 20,
 		});
 		issues = data?.issues ?? [];
@@ -32,6 +41,17 @@ export default async function IssuesPage() {
 					Projeto <Badge variant="outline">{PROJECT_SLUG || 'não configurado'}</Badge>
 				</p>
 			</header>
+
+			<FilterForm
+				action="/issues"
+				values={{ environment, route, startDate, endDate }}
+				fields={[
+					{ name: 'environment', label: 'Ambiente', type: 'text', placeholder: 'production' },
+					{ name: 'route', label: 'Rota', type: 'text', placeholder: 'agendamento-visita' },
+					{ name: 'startDate', label: 'De', type: 'date' },
+					{ name: 'endDate', label: 'Até', type: 'date' },
+				]}
+			/>
 
 			{issues.length === 0 ? (
 				<p className="text-muted-foreground text-sm">{emptyMessage}</p>
