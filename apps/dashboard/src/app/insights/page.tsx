@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 
 export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageTitle } from '@/components/page-title';
+import { MousePointerClick } from 'lucide-react';
 
 export default async function InsightsPage() {
 	let data: ClarityInsights | undefined;
@@ -19,8 +21,12 @@ export default async function InsightsPage() {
 	return (
 		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
 			<header>
-				<h1 className="text-xl font-semibold sm:text-2xl">Insights — Microsoft Clarity</h1>
-				<p className="text-muted-foreground text-sm">Últimos 3 dias</p>
+				<PageTitle
+					icon={MousePointerClick}
+					accent="bg-sky-600/10 text-sky-600 dark:text-sky-400"
+					title="Insights — Microsoft Clarity"
+					subtitle={<p className="text-muted-foreground text-sm">Últimos 3 dias</p>}
+				/>
 			</header>
 
 			{!data ? (

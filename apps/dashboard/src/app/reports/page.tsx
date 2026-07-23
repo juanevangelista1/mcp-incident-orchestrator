@@ -1,6 +1,8 @@
 import { listDailyReports } from '@/db/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PageTitle } from '@/components/page-title';
+import { FileText } from 'lucide-react';
 
 // Lê o SQLite local a cada request — o histórico muda a cada digest novo, não deve
 // ficar preso ao snapshot do momento do build.
@@ -12,12 +14,16 @@ export default async function ReportsPage() {
 	return (
 		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
 			<header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-				<div>
-					<h1 className="text-xl font-semibold sm:text-2xl">Relatórios diários</h1>
-					<p className="text-muted-foreground text-sm">
-						Histórico gerado por <code>/api/cron/daily-digest</code> — Sentry, Datadog, Clarity e AWS.
-					</p>
-				</div>
+				<PageTitle
+					icon={FileText}
+					accent="bg-emerald-600/10 text-emerald-600 dark:text-emerald-400"
+					title="Relatórios diários"
+					subtitle={
+						<p className="text-muted-foreground text-sm">
+							Histórico gerado por <code>/api/cron/daily-digest</code> — Sentry, Datadog, Clarity e AWS.
+						</p>
+					}
+				/>
 				{reports.length > 0 && (
 					<a
 						href="/api/export/reports"
@@ -42,12 +48,16 @@ export default async function ReportsPage() {
 							</CardHeader>
 							<CardContent>
 								<div className="flex flex-wrap gap-2 text-sm">
-									<Badge variant="secondary">Sentry: {report.sentryCount}</Badge>
-									<Badge variant="secondary">
+									<Badge className="bg-rose-600/10 text-rose-600 dark:text-rose-400">
+										Sentry: {report.sentryCount}
+									</Badge>
+									<Badge className="bg-violet-600/10 text-violet-600 dark:text-violet-400">
 										Datadog: {report.datadogCount ?? 'indisponível'}
 									</Badge>
-									<Badge variant="secondary">AWS: {report.awsCount ?? 'indisponível'}</Badge>
-									<Badge variant="secondary">
+									<Badge className="bg-amber-600/10 text-amber-600 dark:text-amber-400">
+										AWS: {report.awsCount ?? 'indisponível'}
+									</Badge>
+									<Badge className="bg-sky-600/10 text-sky-600 dark:text-sky-400">
 										Clarity: {report.claritySessions ?? 'indisponível'}
 									</Badge>
 								</div>

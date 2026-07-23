@@ -9,7 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FilterForm } from '@/components/filter-form';
+import { PageTitle } from '@/components/page-title';
 import { toQueryString } from '@/lib/query-string';
+import { AlertTriangle } from 'lucide-react';
 
 const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
 
@@ -38,12 +40,16 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 	return (
 		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
 			<header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-				<div>
-					<h1 className="text-2xl font-semibold">Issues — Sentry</h1>
-					<p className="text-muted-foreground text-sm">
-						Projeto <Badge variant="outline">{PROJECT_SLUG || 'não configurado'}</Badge>
-					</p>
-				</div>
+				<PageTitle
+					icon={AlertTriangle}
+					accent="bg-rose-600/10 text-rose-600 dark:text-rose-400"
+					title="Issues — Sentry"
+					subtitle={
+						<p className="text-muted-foreground text-sm">
+							Projeto <Badge variant="outline">{PROJECT_SLUG || 'não configurado'}</Badge>
+						</p>
+					}
+				/>
 				<a
 					href={`/api/export/issues${toQueryString({ environment, route, startDate, endDate })}`}
 					className="shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent"

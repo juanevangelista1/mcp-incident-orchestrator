@@ -1,6 +1,7 @@
 import { getSentrySummary, getDatadogSummary, getClarityInsights } from '@/lib/mcp-summaries';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertTriangle, Activity, MousePointerClick, Users, type LucideIcon } from 'lucide-react';
 
 // Depende de uma conexão ao vivo com o MCP server — nunca pode ser pré-renderizada em
 // build time (o servidor não existe/não está acessível durante o build, ex: no Vercel).
@@ -30,16 +31,43 @@ export default async function OverviewPage() {
 			</header>
 
 			<section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-				<KpiCard label="Erros não resolvidos" value={sentry?.totalIssues} />
-				<KpiCard label="Ocorrências (Sentry)" value={sentry?.totalOccurrences} />
-				<KpiCard label="Logs (Datadog)" value={datadog?.totalLogs} unavailable={!datadog} />
-				<KpiCard label="Sessões (Clarity)" value={clarity?.totalSessions} unavailable={!clarity} />
+				<KpiCard
+					label="Erros não resolvidos"
+					value={sentry?.totalIssues}
+					icon={AlertTriangle}
+					accent="text-rose-600 bg-rose-600/10 dark:text-rose-400"
+				/>
+				<KpiCard
+					label="Ocorrências (Sentry)"
+					value={sentry?.totalOccurrences}
+					icon={AlertTriangle}
+					accent="text-rose-600 bg-rose-600/10 dark:text-rose-400"
+				/>
+				<KpiCard
+					label="Logs (Datadog)"
+					value={datadog?.totalLogs}
+					unavailable={!datadog}
+					icon={Activity}
+					accent="text-violet-600 bg-violet-600/10 dark:text-violet-400"
+				/>
+				<KpiCard
+					label="Sessões (Clarity)"
+					value={clarity?.totalSessions}
+					unavailable={!clarity}
+					icon={Users}
+					accent="text-sky-600 bg-sky-600/10 dark:text-sky-400"
+				/>
 			</section>
 
 			<section className="grid gap-6 md:grid-cols-2">
 				<Card>
 					<CardHeader>
-						<CardTitle>Erros mais frequentes (Sentry)</CardTitle>
+						<div className="flex items-center gap-2">
+							<span className="flex size-7 items-center justify-center rounded-md bg-rose-600/10 text-rose-600 dark:text-rose-400">
+								<AlertTriangle className="size-4" />
+							</span>
+							<CardTitle>Erros mais frequentes (Sentry)</CardTitle>
+						</div>
 						<CardDescription>Top rotas/funções por ocorrências</CardDescription>
 					</CardHeader>
 					<CardContent>
@@ -60,22 +88,21 @@ export default async function OverviewPage() {
 
 				<Card>
 					<CardHeader>
-						<CardTitle>Comportamento do usuário (Clarity)</CardTitle>
+						<div className="flex items-center gap-2">
+							<span className="flex size-7 items-center justify-center rounded-md bg-sky-600/10 text-sky-600 dark:text-sky-400">
+								<MousePointerClick className="size-4" />
+							</span>
+							<CardTitle>Comportamento do usuário (Clarity)</CardTitle>
+						</div>
 						<CardDescription>Rage clicks, dead clicks e páginas mais visitadas</CardDescription>
 					</CardHeader>
 					<CardContent>
 						{clarity ? (
 							<div className="flex flex-col gap-4 text-sm">
-								<div className="flex gap-4">
-									<span>
-										Rage clicks: <strong>{clarity.rageClicks}</strong>
-									</span>
-									<span>
-										Dead clicks: <strong>{clarity.deadClicks}</strong>
-									</span>
-									<span>
-										Erros de script: <strong>{clarity.scriptErrors}</strong>
-									</span>
+								<div className="flex flex-wrap gap-2">
+									<Badge variant="outline">Rage clicks: {clarity.rageClicks}</Badge>
+									<Badge variant="outline">Dead clicks: {clarity.deadClicks}</Badge>
+									<Badge variant="outline">Erros de script: {clarity.scriptErrors}</Badge>
 								</div>
 								<ul className="flex flex-col gap-1">
 									{clarity.topPages.map((p, i) => (
@@ -96,11 +123,28 @@ export default async function OverviewPage() {
 	);
 }
 
-function KpiCard({ label, value, unavailable }: { label: string; value?: number; unavailable?: boolean }) {
+function KpiCard({
+	label,
+	value,
+	unavailable,
+	icon: Icon,
+	accent,
+}: {
+	label: string;
+	value?: number;
+	unavailable?: boolean;
+	icon: LucideIcon;
+	accent: string;
+}) {
 	return (
 		<Card size="sm">
 			<CardHeader>
-				<CardDescription>{label}</CardDescription>
+				<div className="flex items-center justify-between">
+					<CardDescription>{label}</CardDescription>
+					<span className={`flex size-7 items-center justify-center rounded-md ${accent}`}>
+						<Icon className="size-4" />
+					</span>
+				</div>
 				<CardTitle className="text-2xl sm:text-3xl">
 					{unavailable ? <span className="text-muted-foreground text-sm sm:text-base">indisponível</span> : (value ?? '—')}
 				</CardTitle>
