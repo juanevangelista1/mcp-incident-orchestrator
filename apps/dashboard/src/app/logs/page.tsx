@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FilterForm } from '@/components/filter-form';
+import { toQueryString } from '@/lib/query-string';
 
 type SearchParams = Promise<{ query?: string; service?: string; environment?: string; since?: string }>;
 
@@ -34,9 +35,17 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
 
 	return (
 		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-8">
-			<header>
-				<h1 className="text-2xl font-semibold">Logs — Datadog</h1>
-				<p className="text-muted-foreground text-sm">Últimos {minutesAgo} minuto(s)</p>
+			<header className="flex items-start justify-between gap-4">
+				<div>
+					<h1 className="text-2xl font-semibold">Logs — Datadog</h1>
+					<p className="text-muted-foreground text-sm">Últimos {minutesAgo} minuto(s)</p>
+				</div>
+				<a
+					href={`/api/export/logs${toQueryString({ query, service, environment, since })}`}
+					className="shrink-0 rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+				>
+					Baixar CSV
+				</a>
 			</header>
 
 			<FilterForm

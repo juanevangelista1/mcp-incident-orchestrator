@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FilterForm } from '@/components/filter-form';
+import { toQueryString } from '@/lib/query-string';
 
 const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
 
@@ -35,11 +36,19 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 
 	return (
 		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-8">
-			<header>
-				<h1 className="text-2xl font-semibold">Issues — Sentry</h1>
-				<p className="text-muted-foreground text-sm">
-					Projeto <Badge variant="outline">{PROJECT_SLUG || 'não configurado'}</Badge>
-				</p>
+			<header className="flex items-start justify-between gap-4">
+				<div>
+					<h1 className="text-2xl font-semibold">Issues — Sentry</h1>
+					<p className="text-muted-foreground text-sm">
+						Projeto <Badge variant="outline">{PROJECT_SLUG || 'não configurado'}</Badge>
+					</p>
+				</div>
+				<a
+					href={`/api/export/issues${toQueryString({ environment, route, startDate, endDate })}`}
+					className="shrink-0 rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+				>
+					Baixar CSV
+				</a>
 			</header>
 
 			<FilterForm

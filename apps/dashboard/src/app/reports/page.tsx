@@ -11,11 +11,21 @@ export default async function ReportsPage() {
 
 	return (
 		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-8">
-			<header>
-				<h1 className="text-2xl font-semibold">Relatórios diários</h1>
-				<p className="text-muted-foreground text-sm">
-					Histórico gerado por <code>/api/cron/daily-digest</code> — Sentry, Datadog, Clarity e AWS.
-				</p>
+			<header className="flex items-start justify-between gap-4">
+				<div>
+					<h1 className="text-2xl font-semibold">Relatórios diários</h1>
+					<p className="text-muted-foreground text-sm">
+						Histórico gerado por <code>/api/cron/daily-digest</code> — Sentry, Datadog, Clarity e AWS.
+					</p>
+				</div>
+				{reports.length > 0 && (
+					<a
+						href="/api/export/reports"
+						className="shrink-0 rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+					>
+						Baixar CSV
+					</a>
+				)}
 			</header>
 
 			{reports.length === 0 ? (
