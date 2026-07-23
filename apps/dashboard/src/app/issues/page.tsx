@@ -38,7 +38,7 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 	}
 
 	return (
-		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
+		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
 			<header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 				<PageTitle
 					icon={AlertTriangle}
@@ -52,7 +52,7 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 				/>
 				<a
 					href={`/api/export/issues${toQueryString({ environment, route, startDate, endDate })}`}
-					className="shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+					className="focus-visible:ring-ring shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
 				>
 					Baixar CSV
 				</a>
@@ -82,7 +82,9 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 										{issue.title}
 									</Link>
 									<div className="flex items-center justify-between gap-2">
-										<span className="text-muted-foreground truncate text-xs">{issue.culprit}</span>
+										<span title={issue.culprit} className="text-muted-foreground truncate text-xs">
+											{issue.culprit}
+										</span>
 										<Badge variant="secondary">{issue.count}</Badge>
 									</div>
 								</CardContent>
@@ -104,11 +106,13 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 								{issues.map((issue) => (
 									<TableRow key={issue.id}>
 										<TableCell className="max-w-md truncate">
-											<Link href={`/issues/${issue.id}`} className="hover:underline">
+											<Link href={`/issues/${issue.id}`} title={issue.title} className="hover:underline">
 												{issue.title}
 											</Link>
 										</TableCell>
-										<TableCell className="text-muted-foreground max-w-xs truncate">{issue.culprit}</TableCell>
+										<TableCell title={issue.culprit} className="text-muted-foreground max-w-xs truncate">
+											{issue.culprit}
+										</TableCell>
 										<TableCell className="text-right">
 											<Badge variant="secondary">{issue.count}</Badge>
 										</TableCell>

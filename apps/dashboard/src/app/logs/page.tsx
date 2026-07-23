@@ -37,7 +37,7 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
 	}
 
 	return (
-		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
+		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
 			<header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 				<PageTitle
 					icon={Activity}
@@ -47,7 +47,7 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
 				/>
 				<a
 					href={`/api/export/logs${toQueryString({ query, service, environment, since })}`}
-					className="shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+					className="focus-visible:ring-ring shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
 				>
 					Baixar CSV
 				</a>
@@ -76,7 +76,7 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
 										<Badge variant={log.status === 'error' ? 'destructive' : 'secondary'}>{log.status}</Badge>
 										<span className="text-muted-foreground text-xs">{log.timestamp}</span>
 									</div>
-									<Link href={`/logs/${log.id}`} className="text-sm hover:underline">
+									<Link href={`/logs/${log.id}`} title={log.message} className="line-clamp-2 text-sm hover:underline">
 										{log.message}
 									</Link>
 									<span className="text-muted-foreground text-xs">{log.service}</span>
@@ -104,7 +104,7 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
 										</TableCell>
 										<TableCell>{log.service}</TableCell>
 										<TableCell className="max-w-md truncate">
-											<Link href={`/logs/${log.id}`} className="hover:underline">
+											<Link href={`/logs/${log.id}`} title={log.message} className="hover:underline">
 												{log.message}
 											</Link>
 										</TableCell>

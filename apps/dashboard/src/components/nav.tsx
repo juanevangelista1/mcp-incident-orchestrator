@@ -19,10 +19,16 @@ export function Nav() {
 	const [open, setOpen] = useState(false);
 
 	return (
-		<nav className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
+		<nav
+			aria-label="Navegação principal"
+			className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80"
+		>
 			<div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-8">
 				<Link href="/" className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight">
-					<span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+					<span
+						aria-hidden="true"
+						className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+					>
 						<Activity className="size-4" strokeWidth={2.5} />
 					</span>
 					Incident Orchestrator
@@ -39,15 +45,16 @@ export function Nav() {
 					type="button"
 					onClick={() => setOpen((v) => !v)}
 					aria-expanded={open}
-					aria-label="Abrir menu"
-					className="flex size-9 items-center justify-center rounded-md border sm:hidden"
+					aria-controls="mobile-menu"
+					aria-label={open ? 'Fechar menu' : 'Abrir menu'}
+					className="focus-visible:ring-ring flex size-9 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none sm:hidden"
 				>
-					{open ? <X className="size-4" /> : <Menu className="size-4" />}
+					{open ? <X aria-hidden="true" className="size-4" /> : <Menu aria-hidden="true" className="size-4" />}
 				</button>
 			</div>
 
 			{open && (
-				<div className="flex flex-col gap-1 border-t px-4 py-3 text-sm sm:hidden">
+				<div id="mobile-menu" className="flex flex-col gap-1 border-t px-4 py-3 text-sm sm:hidden">
 					{links.map((link) => (
 						<NavLink
 							key={link.href}
@@ -81,7 +88,8 @@ function NavLink({
 		<Link
 			href={href}
 			onClick={onClick}
-			className={`rounded-full px-3 py-1.5 transition-colors ${block ? 'block' : ''} ${
+			aria-current={active ? 'page' : undefined}
+			className={`focus-visible:ring-ring rounded-full px-3 py-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none ${block ? 'block' : ''} ${
 				active
 					? 'bg-accent font-medium text-accent-foreground'
 					: 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'

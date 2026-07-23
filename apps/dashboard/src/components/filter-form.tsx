@@ -23,6 +23,8 @@ export function FilterForm({
 		<form
 			method="get"
 			action={action}
+			role="search"
+			aria-label="Filtros de busca"
 			className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4 sm:flex sm:flex-wrap sm:items-end"
 		>
 			{fields.map((field) => (
@@ -33,23 +35,23 @@ export function FilterForm({
 						name={field.name}
 						defaultValue={values[field.name] ?? ''}
 						placeholder={field.placeholder}
-						className="w-full rounded-md border px-2 py-1.5 text-sm sm:w-auto"
+						className="focus-visible:ring-ring w-full rounded-md border px-2 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none sm:w-auto"
 					/>
 				</label>
 			))}
 			<div className="col-span-2 flex gap-2 sm:col-span-1">
 				<button
 					type="submit"
-					className="flex-1 rounded-md bg-primary px-4 py-1.5 text-sm text-primary-foreground sm:flex-none"
+					className="focus-visible:ring-ring flex-1 rounded-md bg-primary px-4 py-1.5 text-sm text-primary-foreground focus-visible:ring-2 focus-visible:outline-none sm:flex-none"
 				>
 					Filtrar
 				</button>
 				{hasActiveFilter && (
 					<a
 						href={action}
-						className="text-muted-foreground flex items-center px-2 py-1.5 text-sm hover:underline"
+						className="focus-visible:ring-ring text-muted-foreground flex items-center rounded-md px-2 py-1.5 text-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
 					>
-						Limpar
+						Limpar filtros
 					</a>
 				)}
 			</div>

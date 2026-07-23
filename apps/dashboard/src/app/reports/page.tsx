@@ -12,7 +12,7 @@ export default async function ReportsPage() {
 	const reports = listDailyReports();
 
 	return (
-		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
+		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
 			<header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 				<PageTitle
 					icon={FileText}
@@ -27,7 +27,7 @@ export default async function ReportsPage() {
 				{reports.length > 0 && (
 					<a
 						href="/api/export/reports"
-						className="shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+						className="focus-visible:ring-ring shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
 					>
 						Baixar CSV
 					</a>

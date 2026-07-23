@@ -19,7 +19,7 @@ export default async function InsightsPage() {
 	}
 
 	return (
-		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
+		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
 			<header>
 				<PageTitle
 					icon={MousePointerClick}

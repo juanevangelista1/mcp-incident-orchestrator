@@ -21,7 +21,7 @@ export default async function OverviewPage() {
 	const clarity = clarityResult.status === 'fulfilled' ? clarityResult.value : null;
 
 	return (
-		<main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:gap-8 sm:p-8">
+		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:gap-8 sm:p-8">
 			<header>
 				<h1 className="text-xl font-semibold sm:text-2xl">Incident Orchestrator — Overview</h1>
 				<p className="text-muted-foreground text-sm">
@@ -63,7 +63,10 @@ export default async function OverviewPage() {
 				<Card>
 					<CardHeader>
 						<div className="flex items-center gap-2">
-							<span className="flex size-7 items-center justify-center rounded-md bg-rose-600/10 text-rose-600 dark:text-rose-400">
+							<span
+								aria-hidden="true"
+								className="flex size-7 items-center justify-center rounded-md bg-rose-600/10 text-rose-600 dark:text-rose-400"
+							>
 								<AlertTriangle className="size-4" />
 							</span>
 							<CardTitle>Erros mais frequentes (Sentry)</CardTitle>
@@ -75,7 +78,9 @@ export default async function OverviewPage() {
 							<ul className="flex flex-col gap-2 text-sm">
 								{sentry.topCulprits.map((c) => (
 									<li key={c.culprit} className="flex items-center justify-between gap-4">
-										<span className="truncate text-muted-foreground">{c.culprit}</span>
+										<span title={c.culprit} className="truncate text-muted-foreground">
+											{c.culprit}
+										</span>
 										<Badge variant="secondary">{c.count}</Badge>
 									</li>
 								))}
@@ -89,7 +94,10 @@ export default async function OverviewPage() {
 				<Card>
 					<CardHeader>
 						<div className="flex items-center gap-2">
-							<span className="flex size-7 items-center justify-center rounded-md bg-sky-600/10 text-sky-600 dark:text-sky-400">
+							<span
+								aria-hidden="true"
+								className="flex size-7 items-center justify-center rounded-md bg-sky-600/10 text-sky-600 dark:text-sky-400"
+							>
 								<MousePointerClick className="size-4" />
 							</span>
 							<CardTitle>Comportamento do usuário (Clarity)</CardTitle>
@@ -107,7 +115,9 @@ export default async function OverviewPage() {
 								<ul className="flex flex-col gap-1">
 									{clarity.topPages.map((p, i) => (
 										<li key={`${p.url}-${i}`} className="flex items-center justify-between gap-4">
-											<span className="truncate text-muted-foreground">{p.url}</span>
+											<span title={p.url} className="truncate text-muted-foreground">
+												{p.url}
+											</span>
 											<Badge variant="secondary">{p.sessions}</Badge>
 										</li>
 									))}
@@ -141,7 +151,7 @@ function KpiCard({
 			<CardHeader>
 				<div className="flex items-center justify-between">
 					<CardDescription>{label}</CardDescription>
-					<span className={`flex size-7 items-center justify-center rounded-md ${accent}`}>
+					<span aria-hidden="true" className={`flex size-7 items-center justify-center rounded-md ${accent}`}>
 						<Icon className="size-4" />
 					</span>
 				</div>

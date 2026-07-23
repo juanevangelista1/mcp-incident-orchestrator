@@ -18,7 +18,7 @@ export default function ChatPage() {
 	}
 
 	return (
-		<main className="mx-auto flex max-w-3xl flex-1 flex-col gap-4 p-4 sm:p-8">
+		<main id="main-content" className="mx-auto flex max-w-3xl flex-1 flex-col gap-4 p-4 sm:p-8">
 			<header>
 				<PageTitle
 					icon={MessageCircle}
@@ -34,7 +34,7 @@ export default function ChatPage() {
 			</header>
 
 			<Card className="flex-1">
-				<CardContent className="flex flex-col gap-4">
+				<CardContent aria-live="polite" aria-relevant="additions" className="flex flex-col gap-4">
 					{messages.length === 0 && (
 						<p className="text-muted-foreground text-sm">Nenhuma mensagem ainda.</p>
 					)}
@@ -79,16 +79,20 @@ export default function ChatPage() {
 			</Card>
 
 			<form onSubmit={handleSubmit} className="flex gap-2">
+				<label htmlFor="chat-input" className="sr-only">
+					Sua pergunta
+				</label>
 				<input
+					id="chat-input"
 					value={input}
 					onChange={(e) => setInput(e.target.value)}
 					placeholder="Pergunte algo sobre a aplicação..."
-					className="flex-1 rounded-md border px-3 py-2 text-sm"
+					className="focus-visible:ring-ring flex-1 rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
 				/>
 				<button
 					type="submit"
 					disabled={status !== 'ready'}
-					className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+					className="focus-visible:ring-ring rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
 				>
 					Enviar
 				</button>

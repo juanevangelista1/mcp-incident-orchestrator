@@ -16,7 +16,7 @@ export function PageTitle({
 }) {
 	return (
 		<div className="flex items-center gap-3">
-			<span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${accent}`}>
+			<span aria-hidden="true" className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${accent}`}>
 				<Icon className="size-5" />
 			</span>
 			<div>
