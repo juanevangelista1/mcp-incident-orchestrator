@@ -12,7 +12,9 @@ async function safeCall<T>(name: string, args: Record<string, unknown>): Promise
 		const { data } = await callMcpTool<T>(name, args);
 		return data ?? null;
 	} catch (error) {
-		console.error(`[mcp-summaries] '${name}' indisponível:`, error);
+		// console.warn, não console.error: o caso mais comum é um plugin opcional desligado
+		// no MCP server (ver server-factory.ts), o que é esperado, não uma falha da página.
+		console.warn(`[mcp-summaries] '${name}' indisponível: ${error instanceof Error ? error.message : error}`);
 		return null;
 	}
 }

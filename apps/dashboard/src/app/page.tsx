@@ -78,8 +78,8 @@ export default async function OverviewPage() {
 									</span>
 								</div>
 								<ul className="flex flex-col gap-1">
-									{clarity.topPages.map((p) => (
-										<li key={p.url} className="flex items-center justify-between gap-4">
+									{clarity.topPages.map((p, i) => (
+										<li key={`${p.url}-${i}`} className="flex items-center justify-between gap-4">
 											<span className="truncate text-muted-foreground">{p.url}</span>
 											<Badge variant="secondary">{p.sessions}</Badge>
 										</li>

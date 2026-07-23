@@ -60,8 +60,8 @@ export default async function InsightsPage() {
 						</CardHeader>
 						<CardContent>
 							<ul className="flex flex-col gap-2 text-sm">
-								{data.topPages.map((page) => (
-									<li key={page.url} className="flex items-center justify-between gap-4">
+								{data.topPages.map((page, i) => (
+									<li key={`${page.url}-${i}`} className="flex items-center justify-between gap-4">
 										<span className="truncate text-muted-foreground">{page.url}</span>
 										<Badge variant="secondary">{page.sessions}</Badge>
 									</li>
