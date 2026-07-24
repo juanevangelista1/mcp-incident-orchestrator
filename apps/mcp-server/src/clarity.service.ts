@@ -1,10 +1,12 @@
 import { ClarityInsights, clarityInsightsSchema } from './clarity.schema';
-import { TtlCache } from './lib/ttl-cache';
+import { TtlCache, cacheFilePath } from './lib/ttl-cache';
 
 // A API pública do Clarity impõe um limite duro de 10 requisições/dia por projeto
-// (imposto pela Microsoft, não por nós). Por isso o cache aqui é bem mais agressivo
-// que o do Sentry/Datadog: 10 minutos, para não estourar a cota com poucas perguntas da IA.
-const CACHE_TTL_MS = 10 * 60 * 1000;
+// (imposto pela Microsoft, não por nós). Por isso o TTL aqui é bem mais agressivo que o do
+// Sentry/Datadog (1 hora), e o cache é persistido em disco (ver TtlCache): sem isso, cada
+// reinício do servidor MCP (tsx watch em dev, deploy/crash em produção) zerava o cache em
+// memória e a próxima pergunta da IA voltava a gastar cota, mesmo com poucos minutos de uso.
+const CACHE_TTL_MS = 60 * 60 * 1000;
 
 // Candidatos de nome de campo aceitos ao procurar cada métrica na resposta.
 // Nota de honestidade técnica: a documentação pública do Clarity é escassa e não encontrei
@@ -26,7 +28,11 @@ interface FetchInsightsParams {
 
 export class ClarityService {
 	private readonly apiToken: string;
-	private readonly cache = new TtlCache<ClarityInsights>(CACHE_TTL_MS);
+	private readonly cache = new TtlCache<ClarityInsights>(
+		CACHE_TTL_MS,
+		500,
+		cacheFilePath(__dirname, 'clarity-insights.json'),
+	);
 
 	constructor() {
 		const token = process.env.CLARITY_API_TOKEN;

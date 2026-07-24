@@ -1,6 +1,6 @@
 import { CloudWatchLogsClient, FilterLogEventsCommand, GetLogEventsCommand } from '@aws-sdk/client-cloudwatch-logs';
 import { AwsLogEntry, AwsLogDetails, AwsLogsSummary, awsLogEntrySchema, awsLogDetailsSchema } from './aws-cloudwatch.schema';
-import { TtlCache } from './lib/ttl-cache';
+import { TtlCache, cacheFilePath } from './lib/ttl-cache';
 
 interface LogQueryParams {
 	logGroupName?: string;
@@ -28,8 +28,16 @@ export class AwsCloudWatchService {
 	private readonly client: CloudWatchLogsClient;
 	private readonly defaultLogGroupName?: string;
 
-	private readonly searchCache = new TtlCache<AwsLogEntry[]>(30_000);
-	private readonly detailsCache = new TtlCache<AwsLogDetails>(60_000);
+	private readonly searchCache = new TtlCache<AwsLogEntry[]>(
+		30_000,
+		500,
+		cacheFilePath(__dirname, 'aws-search.json'),
+	);
+	private readonly detailsCache = new TtlCache<AwsLogDetails>(
+		60_000,
+		500,
+		cacheFilePath(__dirname, 'aws-log-details.json'),
+	);
 
 	constructor() {
 		const region = process.env.AWS_REGION;

@@ -5,7 +5,7 @@ import {
 	datadogLogEntrySchema,
 	datadogLogDetailsSchema,
 } from './datadog.schema';
-import { TtlCache } from './lib/ttl-cache';
+import { TtlCache, cacheFilePath } from './lib/ttl-cache';
 
 interface LogQueryParams {
 	query?: string;
@@ -21,8 +21,16 @@ export class DatadogService {
 
 	// Mesma proteção usada no SentryService: se a IA repetir a mesma busca em poucos segundos,
 	// respondemos da memória em vez de gastar mais uma chamada (o Datadog cobra por consulta de log).
-	private readonly searchCache = new TtlCache<DatadogLogEntry[]>(30_000);
-	private readonly detailsCache = new TtlCache<DatadogLogDetails>(60_000);
+	private readonly searchCache = new TtlCache<DatadogLogEntry[]>(
+		30_000,
+		500,
+		cacheFilePath(__dirname, 'datadog-search.json'),
+	);
+	private readonly detailsCache = new TtlCache<DatadogLogDetails>(
+		60_000,
+		500,
+		cacheFilePath(__dirname, 'datadog-log-details.json'),
+	);
 
 	constructor() {
 		const apiKey = process.env.DATADOG_API_KEY;

@@ -5,7 +5,7 @@ import {
 	sentryIssueDetailsSchema,
 	sentryIssueSchema,
 } from './sentry.schema';
-import { TtlCache } from './lib/ttl-cache';
+import { TtlCache, cacheFilePath } from './lib/ttl-cache';
 
 export interface IssuesQueryParams {
 	environment?: string;
@@ -19,7 +19,12 @@ export class SentryService {
 	private readonly organizationSlug: string;
 
 	// Protege contra a IA repetindo a mesma consulta de detalhes em loop (rate limiting do Sentry).
-	private readonly detailsCache = new TtlCache<SentryIssueDetails>(60_000);
+	// Persistido em disco pelo mesmo motivo do cache do Clarity: sobreviver a reinícios do servidor.
+	private readonly detailsCache = new TtlCache<SentryIssueDetails>(
+		60_000,
+		500,
+		cacheFilePath(__dirname, 'sentry-issue-details.json'),
+	);
 
 	// Cache permanente: o ID numérico de um projeto no Sentry nunca muda depois de criado,
 	// então não faz sentido esse valor expirar como o cache de detalhes de erro (TTL).
