@@ -12,6 +12,8 @@ export interface IssuesQueryParams {
 	route?: string;
 	startDate?: string;
 	endDate?: string;
+	search?: string;
+	level?: string;
 }
 
 export class SentryService {
@@ -85,6 +87,14 @@ export class SentryService {
 		}
 		if (params.endDate) {
 			tokens.push(`firstSeen:<=${params.endDate}`);
+		}
+		if (params.level) {
+			tokens.push(`level:${params.level}`);
+		}
+		if (params.search) {
+			// Termo livre (sem prefixo de tag) é buscado pelo Sentry no título/mensagem do evento.
+			// Frases com espaço precisam de aspas, senão cada palavra vira um token separado.
+			tokens.push(params.search.includes(' ') ? `"${params.search}"` : params.search);
 		}
 		return tokens.join(' ');
 	}

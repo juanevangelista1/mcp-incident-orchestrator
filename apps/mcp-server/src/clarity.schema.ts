@@ -23,6 +23,12 @@ export const clarityInsightsSchema = z.object({
 	deadClicks: z.number(),
 	scriptErrors: z.number(),
 	topPages: z.array(z.object({ url: z.string(), sessions: z.number() })),
+	// Detalhamentos (subtipos): em quais páginas cada tipo de clique problemático mais
+	// acontece, e como as sessões se distribuem por dispositivo/navegador.
+	rageClicksByPage: z.array(z.object({ url: z.string(), count: z.number() })),
+	deadClicksByPage: z.array(z.object({ url: z.string(), count: z.number() })),
+	sessionsByDevice: z.array(z.object({ device: z.string(), count: z.number() })),
+	sessionsByBrowser: z.array(z.object({ browser: z.string(), count: z.number() })),
 });
 
 export type ClarityInsights = z.infer<typeof clarityInsightsSchema>;

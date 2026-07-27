@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getSentrySummary, getDatadogSummary, getClarityInsights } from '@/lib/mcp-summaries';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +34,7 @@ export default async function OverviewPage() {
 
 			<section className="grid grid-cols-2 gap-4 md:grid-cols-4">
 				<KpiCard
+					href="/issues"
 					label="Erros não resolvidos"
 					value={sentry?.totalIssues}
 					icon={AlertTriangle}
@@ -40,6 +42,7 @@ export default async function OverviewPage() {
 					borderColor="border-t-rose-500/70"
 				/>
 				<KpiCard
+					href="/issues"
 					label="Ocorrências (Sentry)"
 					value={sentry?.totalOccurrences}
 					icon={AlertTriangle}
@@ -47,6 +50,7 @@ export default async function OverviewPage() {
 					borderColor="border-t-rose-500/70"
 				/>
 				<KpiCard
+					href="/logs"
 					label="Logs (Datadog)"
 					value={datadog?.totalLogs}
 					unavailable={!datadog}
@@ -55,6 +59,7 @@ export default async function OverviewPage() {
 					borderColor="border-t-violet-500/70"
 				/>
 				<KpiCard
+					href="/insights"
 					label="Sessões (Clarity)"
 					value={clarity?.totalSessions}
 					unavailable={!clarity}
@@ -74,7 +79,9 @@ export default async function OverviewPage() {
 							>
 								<AlertTriangle className="size-4" />
 							</span>
-							<CardTitle>Erros mais frequentes (Sentry)</CardTitle>
+							<Link href="/issues" className="hover:underline">
+								<CardTitle>Erros mais frequentes (Sentry)</CardTitle>
+							</Link>
 						</div>
 						<CardDescription>Top rotas/funções por ocorrências</CardDescription>
 					</CardHeader>
@@ -82,13 +89,18 @@ export default async function OverviewPage() {
 						{sentry && sentry.topCulprits.length > 0 ? (
 							<div className="flex flex-col gap-1">
 								{sentry.topCulprits.map((c) => (
-									<MetricBar
+									<Link
 										key={c.culprit}
-										label={c.culprit}
-										value={c.count}
-										max={sentry.topCulprits[0].count}
-										barColor="bg-rose-500/15"
-									/>
+										href={`/issues?search=${encodeURIComponent(c.culprit)}`}
+										className="block rounded-md hover:bg-accent/60"
+									>
+										<MetricBar
+											label={c.culprit}
+											value={c.count}
+											max={sentry.topCulprits[0].count}
+											barColor="bg-rose-500/15"
+										/>
+									</Link>
 								))}
 							</div>
 						) : (
@@ -106,7 +118,9 @@ export default async function OverviewPage() {
 							>
 								<MousePointerClick className="size-4" />
 							</span>
-							<CardTitle>Comportamento do usuário (Clarity)</CardTitle>
+							<Link href="/insights" className="hover:underline">
+								<CardTitle>Comportamento do usuário (Clarity)</CardTitle>
+							</Link>
 						</div>
 						<CardDescription>Rage clicks, dead clicks e páginas mais visitadas</CardDescription>
 					</CardHeader>
@@ -120,13 +134,18 @@ export default async function OverviewPage() {
 								</div>
 								<div className="flex flex-col gap-1">
 									{clarity.topPages.map((p, i) => (
-										<MetricBar
+										<Link
 											key={`${p.url}-${i}`}
-											label={p.url}
-											value={p.sessions}
-											max={clarity.topPages[0].sessions}
-											barColor="bg-sky-500/15"
-										/>
+											href={`/insights?url=${encodeURIComponent(p.url)}`}
+											className="block rounded-md hover:bg-accent/60"
+										>
+											<MetricBar
+												label={p.url}
+												value={p.sessions}
+												max={clarity.topPages[0].sessions}
+												barColor="bg-sky-500/15"
+											/>
+										</Link>
 									))}
 								</div>
 							</div>
@@ -145,7 +164,9 @@ export default async function OverviewPage() {
 							>
 								<Activity className="size-4" />
 							</span>
-							<CardTitle>Logs por serviço (Datadog)</CardTitle>
+							<Link href="/logs" className="hover:underline">
+								<CardTitle>Logs por serviço (Datadog)</CardTitle>
+							</Link>
 						</div>
 						<CardDescription>Volume por serviço no período monitorado</CardDescription>
 					</CardHeader>
@@ -153,13 +174,18 @@ export default async function OverviewPage() {
 						{datadog && datadog.byService.length > 0 ? (
 							<div className="flex flex-col gap-1">
 								{datadog.byService.slice(0, 5).map((s) => (
-									<MetricBar
+									<Link
 										key={s.service}
-										label={s.service}
-										value={s.count}
-										max={datadog.byService[0].count}
-										barColor="bg-violet-500/15"
-									/>
+										href={`/logs?service=${encodeURIComponent(s.service)}`}
+										className="block rounded-md hover:bg-accent/60"
+									>
+										<MetricBar
+											label={s.service}
+											value={s.count}
+											max={datadog.byService[0].count}
+											barColor="bg-violet-500/15"
+										/>
+									</Link>
 								))}
 							</div>
 						) : (
@@ -173,6 +199,7 @@ export default async function OverviewPage() {
 }
 
 function KpiCard({
+	href,
 	label,
 	value,
 	unavailable,
@@ -180,6 +207,7 @@ function KpiCard({
 	accent,
 	borderColor,
 }: {
+	href: string;
 	label: string;
 	value?: number;
 	unavailable?: boolean;
@@ -188,19 +216,21 @@ function KpiCard({
 	borderColor: string;
 }) {
 	return (
-		<Card size="sm" className={`border-t-4 ${borderColor}`}>
-			<CardHeader>
-				<div className="flex items-center justify-between">
-					<CardDescription>{label}</CardDescription>
-					<span aria-hidden="true" className={`flex size-7 items-center justify-center rounded-md ${accent}`}>
-						<Icon className="size-4" />
-					</span>
-				</div>
-				<CardTitle className="text-2xl sm:text-3xl">
-					{unavailable ? <span className="text-muted-foreground text-sm sm:text-base">indisponível</span> : (value ?? '—')}
-				</CardTitle>
-			</CardHeader>
-		</Card>
+		<Link href={href} className="block">
+			<Card size="sm" className={`border-t-4 transition-colors hover:bg-accent/40 ${borderColor}`}>
+				<CardHeader>
+					<div className="flex items-center justify-between">
+						<CardDescription>{label}</CardDescription>
+						<span aria-hidden="true" className={`flex size-7 items-center justify-center rounded-md ${accent}`}>
+							<Icon className="size-4" />
+						</span>
+					</div>
+					<CardTitle className="text-2xl sm:text-3xl">
+						{unavailable ? <span className="text-muted-foreground text-sm sm:text-base">indisponível</span> : (value ?? '—')}
+					</CardTitle>
+				</CardHeader>
+			</Card>
+		</Link>
 	);
 }
 

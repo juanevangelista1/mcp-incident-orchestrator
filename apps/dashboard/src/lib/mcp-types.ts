@@ -64,6 +64,10 @@ export interface ClarityInsights {
 	deadClicks: number;
 	scriptErrors: number;
 	topPages: { url: string; sessions: number }[];
+	rageClicksByPage: { url: string; count: number }[];
+	deadClicksByPage: { url: string; count: number }[];
+	sessionsByDevice: { device: string; count: number }[];
+	sessionsByBrowser: { browser: string; count: number }[];
 }
 
 export interface AwsLogEntry {

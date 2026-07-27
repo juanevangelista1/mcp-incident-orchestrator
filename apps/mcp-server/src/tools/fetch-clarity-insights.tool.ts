@@ -22,6 +22,18 @@ export function registerFetchClarityInsightsTool(server: McpServer, clarityServi
 				const topPagesReport = insights.topPages
 					.map((p, i) => `${i + 1}. ${p.url} — ${p.sessions} sessão(ões)`)
 					.join('\n');
+				const rageByPageReport = insights.rageClicksByPage
+					.map((p, i) => `${i + 1}. ${p.url} — ${p.count} rage click(s)`)
+					.join('\n');
+				const deadByPageReport = insights.deadClicksByPage
+					.map((p, i) => `${i + 1}. ${p.url} — ${p.count} dead click(s)`)
+					.join('\n');
+				const deviceReport = insights.sessionsByDevice
+					.map((d) => `${d.device}: ${d.count} sessão(ões)`)
+					.join(', ');
+				const browserReport = insights.sessionsByBrowser
+					.map((b) => `${b.browser}: ${b.count} sessão(ões)`)
+					.join(', ');
 
 				const report =
 					`Insights do Clarity (últimos ${args.numOfDays} dia(s)):\n` +
@@ -29,7 +41,11 @@ export function registerFetchClarityInsightsTool(server: McpServer, clarityServi
 					`- Rage clicks: ${insights.rageClicks}\n` +
 					`- Dead clicks: ${insights.deadClicks}\n` +
 					`- Erros de script: ${insights.scriptErrors}\n\n` +
-					`Páginas mais visitadas:\n${topPagesReport || 'Nenhuma página encontrada.'}`;
+					`Páginas mais visitadas:\n${topPagesReport || 'Nenhuma página encontrada.'}\n\n` +
+					`Rage clicks por página:\n${rageByPageReport || 'Nenhum rage click encontrado.'}\n\n` +
+					`Dead clicks por página:\n${deadByPageReport || 'Nenhum dead click encontrado.'}\n\n` +
+					`Sessões por dispositivo: ${deviceReport || 'sem dados'}\n` +
+					`Sessões por navegador: ${browserReport || 'sem dados'}`;
 
 				return { content: [{ type: 'text', text: report }], structuredContent: insights };
 			} catch (error: any) {

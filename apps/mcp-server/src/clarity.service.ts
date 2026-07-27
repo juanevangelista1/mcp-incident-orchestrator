@@ -8,22 +8,28 @@ import { TtlCache, cacheFilePath } from './lib/ttl-cache';
 // memória e a próxima pergunta da IA voltava a gastar cota, mesmo com poucos minutos de uso.
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
-// Candidatos de nome de campo aceitos ao procurar cada métrica na resposta.
-// Nota de honestidade técnica: a documentação pública do Clarity é escassa e não encontrei
-// uma referência 100% confiável do shape exato de cada `information[]`. O parsing abaixo
-// varre todas as métricas retornadas procurando por esses nomes, em vez de assumir uma
-// posição fixa — se você testar com um token real e a extração vier zerada, verifique o
-// JSON bruto (log de [CLARITY RAW]) e ajuste as listas de candidatos abaixo.
-const FIELD_CANDIDATES = {
-	sessions: ['totalSessionCount', 'sessionsCount', 'sessionCount'],
-	rageClicks: ['totalRageClickCount', 'rageClickCount'],
-	deadClicks: ['totalDeadClickCount', 'deadClickCount'],
-	scriptErrors: ['totalScriptErrorCount', 'scriptErrorCount'],
-};
+// Confirmado com uma chamada real à API (não documentado publicamente pela Microsoft):
+// cada item do array de resposta é uma métrica (`metricName`), e cada linha de
+// `information[]` traz o valor sob `sessionsCount` (cliques/erros) ou `totalSessionCount`
+// (tráfego) — NUNCA um campo com o nome da métrica embutido (ex: não existe
+// `rageClickCount`). É o `metricName` do item pai que diz o que aquela linha representa.
+// Quando as 3 dimensões abaixo são pedidas, cada linha também traz `Url`, `Device` e
+// `Browser` (exatamente com essa capitalização) referentes ao recorte daquela linha.
+const METRIC_NAMES = {
+	traffic: 'Traffic',
+	rageClicks: 'RageClickCount',
+	deadClicks: 'DeadClickCount',
+	scriptErrors: 'ScriptErrorCount',
+} as const;
 
 interface FetchInsightsParams {
 	numOfDays: number;
 	url?: string;
+}
+
+interface RawMetric {
+	metricName?: string;
+	information?: Record<string, any>[];
 }
 
 export class ClarityService {
@@ -58,18 +64,39 @@ export class ClarityService {
 		throw new Error(`Falha na API do Clarity: ${response.status} ${response.statusText}`);
 	}
 
-	// Varre todas as métricas retornadas em busca do primeiro campo cujo nome bate com
-	// algum dos candidatos, e soma os valores numéricos encontrados nas linhas de `information`.
-	private sumField(rows: Record<string, any>[], candidates: string[]): number {
-		let total = 0;
+	// Acesso case-insensitive a um campo de uma linha — a API já demonstrou inconsistência de
+	// capitalização entre chamadas com e sem dimensões explícitas (`url` vs `Url`).
+	private field(row: Record<string, any>, name: string): any {
+		const key = Object.keys(row).find((k) => k.toLowerCase() === name.toLowerCase());
+		return key ? row[key] : undefined;
+	}
+
+	private rowsFor(metrics: RawMetric[], metricName: string): Record<string, any>[] {
+		return metrics.filter((m) => m.metricName === metricName).flatMap((m) => m.information ?? []);
+	}
+
+	private sum(rows: Record<string, any>[], valueField: string): number {
+		return rows.reduce((total, row) => total + (Number(this.field(row, valueField)) || 0), 0);
+	}
+
+	// Agrupa linhas por um campo de dimensão (Url/Device/Browser) somando o campo de valor,
+	// devolvendo os `limit` maiores — mesmo padrão usado pelas 4 fontes para "top N".
+	private groupSum(
+		rows: Record<string, any>[],
+		keyField: string,
+		valueField: string,
+		limit: number,
+	): { key: string; count: number }[] {
+		const totals = new Map<string, number>();
 		for (const row of rows) {
-			for (const key of Object.keys(row)) {
-				if (candidates.some((c) => c.toLowerCase() === key.toLowerCase())) {
-					total += Number(row[key]) || 0;
-				}
-			}
+			const key = this.field(row, keyField);
+			if (typeof key !== 'string') continue;
+			totals.set(key, (totals.get(key) ?? 0) + (Number(this.field(row, valueField)) || 0));
 		}
-		return total;
+		return [...totals.entries()]
+			.sort((a, b) => b[1] - a[1])
+			.slice(0, limit)
+			.map(([key, count]) => ({ key, count }));
 	}
 
 	public async fetchInsights(params: FetchInsightsParams): Promise<ClarityInsights> {
@@ -82,7 +109,11 @@ export class ClarityService {
 
 		console.error('[CACHE MISS] Buscando insights na API do Clarity (consome cota diária).');
 		const query = new URLSearchParams({ numOfDays: String(params.numOfDays) });
-		if (params.url) query.set('dimension1', 'URL');
+		// Sempre pedimos as 3 dimensões (teto da API): sem isso, os detalhamentos por página/
+		// dispositivo/navegador não vêm na resposta — só os totais agregados.
+		query.set('dimension1', 'URL');
+		query.set('dimension2', 'Device');
+		query.set('dimension3', 'Browser');
 
 		const url = `https://www.clarity.ms/export-data/api/v1/project-live-insights?${query.toString()}`;
 		const response = await fetch(url, {
@@ -91,30 +122,59 @@ export class ClarityService {
 
 		await this.assertOk(response);
 
-		const data = await response.json();
+		const data = (await response.json()) as RawMetric[];
 		console.error('[CLARITY RAW]', JSON.stringify(data).slice(0, 500));
 
-		// Achata todas as métricas em uma única lista de linhas para procurar os campos
-		// que precisamos, independentemente de sob qual `metricName` a API os agrupou.
-		const allRows: Record<string, any>[] = Array.isArray(data)
-			? data.flatMap((metric: any) => metric?.information ?? [])
-			: [];
+		const metrics = Array.isArray(data) ? data : [];
 
-		const pageRows = allRows.filter((row) => typeof row.url === 'string');
-		const topPages = pageRows
-			.map((row) => ({
-				url: row.url,
-				sessions: Number(row.sessionsCount ?? row.visitsCount ?? row.subTotal ?? 0),
-			}))
-			.sort((a, b) => b.sessions - a.sessions)
-			.slice(0, 5);
+		let trafficRows = this.rowsFor(metrics, METRIC_NAMES.traffic);
+		let rageRows = this.rowsFor(metrics, METRIC_NAMES.rageClicks);
+		let deadRows = this.rowsFor(metrics, METRIC_NAMES.deadClicks);
+		let scriptRows = this.rowsFor(metrics, METRIC_NAMES.scriptErrors);
+
+		// `url` filtra por um trecho da URL/rota (busca parcial, case-insensitive) — aplicado
+		// depois da chamada, já que a API não tem um parâmetro de filtro por valor de URL.
+		if (params.url) {
+			const needle = params.url.toLowerCase();
+			const matchesUrl = (row: Record<string, any>) =>
+				String(this.field(row, 'Url') ?? '').toLowerCase().includes(needle);
+			trafficRows = trafficRows.filter(matchesUrl);
+			rageRows = rageRows.filter(matchesUrl);
+			deadRows = deadRows.filter(matchesUrl);
+			scriptRows = scriptRows.filter(matchesUrl);
+		}
+
+		const topPages = this.groupSum(trafficRows, 'Url', 'totalSessionCount', 5).map((r) => ({
+			url: r.key,
+			sessions: r.count,
+		}));
+		const rageClicksByPage = this.groupSum(rageRows, 'Url', 'sessionsCount', 5).map((r) => ({
+			url: r.key,
+			count: r.count,
+		}));
+		const deadClicksByPage = this.groupSum(deadRows, 'Url', 'sessionsCount', 5).map((r) => ({
+			url: r.key,
+			count: r.count,
+		}));
+		const sessionsByDevice = this.groupSum(trafficRows, 'Device', 'totalSessionCount', 5).map((r) => ({
+			device: r.key,
+			count: r.count,
+		}));
+		const sessionsByBrowser = this.groupSum(trafficRows, 'Browser', 'totalSessionCount', 5).map((r) => ({
+			browser: r.key,
+			count: r.count,
+		}));
 
 		const result = clarityInsightsSchema.parse({
-			totalSessions: this.sumField(allRows, FIELD_CANDIDATES.sessions),
-			rageClicks: this.sumField(allRows, FIELD_CANDIDATES.rageClicks),
-			deadClicks: this.sumField(allRows, FIELD_CANDIDATES.deadClicks),
-			scriptErrors: this.sumField(allRows, FIELD_CANDIDATES.scriptErrors),
+			totalSessions: this.sum(trafficRows, 'totalSessionCount'),
+			rageClicks: this.sum(rageRows, 'sessionsCount'),
+			deadClicks: this.sum(deadRows, 'sessionsCount'),
+			scriptErrors: this.sum(scriptRows, 'sessionsCount'),
 			topPages,
+			rageClicksByPage,
+			deadClicksByPage,
+			sessionsByDevice,
+			sessionsByBrowser,
 		});
 
 		this.cache.set(cacheKey, result);

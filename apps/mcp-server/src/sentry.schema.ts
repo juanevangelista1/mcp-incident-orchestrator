@@ -23,6 +23,14 @@ const baseIssueQuerySchema = z.object({
 		.string()
 		.optional()
 		.describe('Data final (formato AAAA-MM-DD) para filtrar erros vistos até ela. Deixe vazio para usar o momento atual.'),
+	search: z
+		.string()
+		.optional()
+		.describe('Busca livre por texto no título/mensagem do erro (ex: "TypeError", "AbortError").'),
+	level: z
+		.string()
+		.optional()
+		.describe('Nível do erro (ex: error, warning, info, debug, fatal). Deixe vazio para todos os níveis.'),
 });
 
 // 1. O que a IA pode nos enviar (Input)

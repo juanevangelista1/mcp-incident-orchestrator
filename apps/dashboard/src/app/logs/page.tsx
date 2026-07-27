@@ -9,18 +9,26 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FilterForm } from '@/components/filter-form';
 import { PageTitle } from '@/components/page-title';
+import { Pagination, PAGE_SIZE } from '@/components/pagination';
 import { toQueryString } from '@/lib/query-string';
 import { Activity } from 'lucide-react';
 
-type SearchParams = Promise<{ query?: string; service?: string; environment?: string; since?: string }>;
+type SearchParams = Promise<{
+	query?: string;
+	service?: string;
+	environment?: string;
+	since?: string;
+	page?: string;
+}>;
 
 export default async function LogsPage({ searchParams }: { searchParams: SearchParams }) {
-	const { query, service, environment, since } = await searchParams;
+	const { query, service, environment, since, page: pageParam } = await searchParams;
 	const minutesAgo = dateToMinutesAgo(since);
+	const page = Math.max(1, Number(pageParam) || 1);
 
 	// O plugin do Datadog é opcional no MCP server: se não estiver configurado, a tool
 	// nem existe e callMcpTool lança um erro — tratamos aqui em vez de derrubar a página.
-	let logs: DatadogLogEntry[] = [];
+	let allLogs: DatadogLogEntry[] = [];
 	let emptyMessage = 'Nenhum log encontrado para esse filtro.';
 	try {
 		const { data, text } = await callMcpTool<{ logs: DatadogLogEntry[] }>('fetch_datadog_logs', {
@@ -30,11 +38,14 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
 			minutesAgo,
 			limit: 50,
 		});
-		logs = data?.logs ?? [];
+		allLogs = data?.logs ?? [];
 		emptyMessage = text || emptyMessage;
 	} catch {
 		emptyMessage = 'Datadog não configurado no MCP server.';
 	}
+
+	const totalPages = Math.max(1, Math.ceil(allLogs.length / PAGE_SIZE));
+	const logs = allLogs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
 	return (
 		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
@@ -113,6 +124,13 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
 							</TableBody>
 						</Table>
 					</div>
+
+					<Pagination
+						page={page}
+						totalPages={totalPages}
+						basePath="/logs"
+						params={{ query, service, environment, since }}
+					/>
 				</>
 			)}
 		</main>

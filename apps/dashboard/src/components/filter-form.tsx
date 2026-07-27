@@ -1,8 +1,9 @@
 export interface FilterField {
 	name: string;
 	label: string;
-	type: 'text' | 'date';
+	type: 'text' | 'date' | 'select';
 	placeholder?: string;
+	options?: { value: string; label: string }[];
 }
 
 // Form GET puro (sem 'use client', sem JS): o navegador já sabe recarregar a página com os
@@ -30,13 +31,28 @@ export function FilterForm({
 			{fields.map((field) => (
 				<label key={field.name} className="col-span-2 flex flex-col gap-1 text-xs sm:col-span-1">
 					<span className="text-muted-foreground">{field.label}</span>
-					<input
-						type={field.type}
-						name={field.name}
-						defaultValue={values[field.name] ?? ''}
-						placeholder={field.placeholder}
-						className="focus-visible:ring-ring w-full rounded-md border px-2 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none sm:w-auto"
-					/>
+					{field.type === 'select' ? (
+						<select
+							name={field.name}
+							defaultValue={values[field.name] ?? ''}
+							className="focus-visible:ring-ring w-full rounded-md border bg-background px-2 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none sm:w-auto"
+						>
+							<option value="">Todos</option>
+							{field.options?.map((option) => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					) : (
+						<input
+							type={field.type}
+							name={field.name}
+							defaultValue={values[field.name] ?? ''}
+							placeholder={field.placeholder}
+							className="focus-visible:ring-ring w-full rounded-md border px-2 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none sm:w-auto"
+						/>
+					)}
 				</label>
 			))}
 			<div className="col-span-2 flex gap-2 sm:col-span-1">
