@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { FilterForm } from '@/components/filter-form';
 import { PageTitle } from '@/components/page-title';
 import { MetricBar } from '@/components/metric-bar';
+import { IssuesExport } from '@/components/issues-export';
 import { Pagination, PAGE_SIZE } from '@/components/pagination';
 import { toQueryString } from '@/lib/query-string';
 import { AlertTriangle } from 'lucide-react';
@@ -91,12 +92,21 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 						</p>
 					}
 				/>
-				<a
-					href={`/api/export/issues${toQueryString({ environment, route, startDate, endDate, search, level })}`}
-					className="focus-visible:ring-ring shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
-				>
-					Baixar CSV
-				</a>
+				<div className="flex shrink-0 gap-2">
+					<a
+						href={`/api/export/issues${toQueryString({ environment, route, startDate, endDate, search, level })}`}
+						className="focus-visible:ring-ring self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
+					>
+						Baixar CSV
+					</a>
+					<IssuesExport
+						issues={allIssues}
+						rankedIssues={rankedAll}
+						pageRank={sentryPageRank}
+						clarityScriptErrors={clarityScriptErrors}
+						filters={{ environment, route, startDate, endDate, search, level }}
+					/>
+				</div>
 			</header>
 
 			<FilterForm

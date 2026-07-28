@@ -7,6 +7,7 @@ import { PageTitle } from '@/components/page-title';
 import { MetricBar } from '@/components/metric-bar';
 import { ShareDonutChart } from '@/components/charts/share-donut-chart';
 import { FilterForm } from '@/components/filter-form';
+import { InsightsExport } from '@/components/insights-export';
 import { MousePointerClick } from 'lucide-react';
 
 type SearchParams = Promise<{ url?: string; device?: string; days?: string }>;
@@ -43,6 +44,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 					title="Insights — Microsoft Clarity"
 					subtitle={<p className="text-muted-foreground text-sm">Últimos {numOfDays} dia(s)</p>}
 				/>
+				{data && <InsightsExport data={data} numOfDays={numOfDays} urlFilter={url} deviceFilter={device} />}
 			</header>
 
 			<FilterForm

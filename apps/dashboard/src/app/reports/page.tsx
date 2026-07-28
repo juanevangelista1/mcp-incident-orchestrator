@@ -6,6 +6,7 @@ import { DailyTrendChart } from '@/components/charts/daily-trend-chart';
 import { toDailyPoints, percentChange, weeklyRollup, monthlyRollup, baseline } from '@/lib/trends';
 import { detectScenario } from '@/lib/scenarios';
 import { NarrativeReport } from '@/components/narrative-report';
+import { ReportsExport } from '@/components/reports-export';
 import { FileText, TrendingUp, TrendingDown, Microscope } from 'lucide-react';
 
 // Lê o SQLite local a cada request — o histórico muda a cada digest novo, não deve
@@ -55,12 +56,22 @@ export default async function ReportsPage() {
 					}
 				/>
 				{reports.length > 0 && (
-					<a
-						href="/api/export/reports"
-						className="focus-visible:ring-ring shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
-					>
-						Baixar CSV
-					</a>
+					<div className="flex shrink-0 gap-2">
+						<a
+							href="/api/export/reports"
+							className="focus-visible:ring-ring self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
+						>
+							Baixar CSV
+						</a>
+						<ReportsExport
+							points={points}
+							weeks={weeks}
+							months={months}
+							sessionsBaseline={sessionsBaseline}
+							occurrencesBaseline={occurrencesBaseline}
+							scenario={scenario}
+						/>
+					</div>
 				)}
 			</header>
 
