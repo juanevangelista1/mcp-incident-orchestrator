@@ -55,24 +55,54 @@ export async function POST() {
 		diasDeHistorico: points.length,
 	};
 
-	const prompt = `Você é um analista técnico de performance/produto. Com base nos dados agregados
-abaixo (Sentry = erros de aplicação, Clarity = comportamento/sessões, "agendamento" = proxy de
-intenção de conversão — sessões que chegaram na página de agendamento, NÃO confirmação de
-conversão concluída), escreva um relatório curto em português, em markdown, com exatamente
-estas seções:
+	const prompt = `Você é um analista sênior de Web Analytics, Product Analytics e Observability,
+investigando a saúde da aplicação e do negócio no nível do PERÍODO (dia mais recente vs.
+anterior), não de um erro específico. Dados: Sentry = erros de aplicação, Clarity =
+comportamento/sessões, "agendamento" = proxy de intenção de conversão — sessões que chegaram
+na página de agendamento, NÃO confirmação de conversão concluída.
+
+Escreva em português, em markdown, seguindo EXATAMENTE esta estrutura, uma seção para cada
+etapa:
+
+## Sintoma
+O que mudou no período mais recente (sessões, erros, chegadas em agendamento) — só os fatos
+observados, sem interpretação ainda.
+
+## Evidência
+Tabela markdown com as métricas, dia atual, dia anterior e variação % (fórmula
+((atual-anterior)/anterior)×100, já calculada nos dados abaixo). Inclua os valores de
+baseline (média/maior/menor) pra contextualizar se o dia atual é normal ou atípico.
+
+## Hipótese
+1-3 hipóteses que os dados permitem levantar (ex: causa técnica, queda de tráfego,
+comportamento sazonal) — sem escolher uma ainda.
+
+## Investigação
+O que os dados disponíveis permitem checar pra cada hipótese, e o que NÃO permitem (seja
+explícito sobre os gaps — ex: sem GA4/CRM, sem funil completo de formulário).
+
+## Correlação
+Tabela markdown: Hipótese | Suportada por | Nível de confiança (Alta/Média/Baixa) | Ressalva.
+Inclua sempre a ressalva de que a correlação é agregada por dia, não por sessão individual
+(Sentry e Clarity não compartilham ID de sessão/usuário).
 
 ## Causa provável
-1-2 parágrafos. Baseie-se SOMENTE nos dados fornecidos. Se a evidência for insuficiente para
-apontar uma causa, diga isso explicitamente em vez de especular.
+Nunca conclua de forma simplista (proibido: "os agendamentos caíram por causa de erros").
+Use um tom como um destes dois exemplos, adaptando aos números reais:
+- COM evidência forte: "Entre os dias X e Y, os agendamentos caíram Z%, enquanto as sessões
+  permaneceram estáveis. No mesmo período, o erro W aumentou V%, afetando principalmente
+  [dispositivo/página]. Existem evidências de associação entre o erro e a queda de
+  conversão."
+- SEM evidência suficiente: "Os agendamentos caíram Z%, porém os erros permaneceram
+  estáveis e a taxa de erro por sessão não aumentou. Ao mesmo tempo, [outro fator, ex:
+  tráfego] caiu W%. Os dados disponíveis não sustentam a hipótese de que problemas técnicos
+  sejam a causa principal."
 
-## Resumo quantitativo
-Uma tabela markdown com as métricas, dia atual, dia anterior e variação %.
+## Impacto
+Quantifique o alcance (variação %, quantos dias de histórico sustentam a conclusão).
 
-## Matriz de confiança
-Uma tabela markdown: Hipótese | Suportada por | Nível de confiança (Alta/Média/Baixa) | Ressalva.
-Inclua sempre a ressalva de que a correlação é agregada por dia, não por sessão individual
-(Sentry e Clarity não compartilham ID de sessão/usuário), e que "agendamento" é um proxy de
-chegada na página, não confirmação de conversão.
+## Ação recomendada
+O que fazer agora e o que monitorar daqui pra frente pra confirmar ou descartar a hipótese.
 
 Dados:
 ${JSON.stringify(evidence, null, 2)}`;
