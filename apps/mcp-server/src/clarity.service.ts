@@ -9,13 +9,14 @@ import { TtlCache, cacheFilePath } from './lib/ttl-cache';
 // A API pública do Clarity impõe um limite duro de 10 requisições/dia por projeto
 // (imposto pela Microsoft, não por nós). Cada combinação distinta de parâmetros
 // (numOfDays/url/device) é uma chave de cache separada — ou seja, um novo gasto de cota.
-// TTL de 3h (em vez de 1h): navegar entre /insights, /insights/agendamento e /issues ao
-// longo do dia com filtros diferentes soma chaves rápido; 3h dá margem pra ficar bem abaixo
-// de 10/dia mesmo testando alguns filtros diferentes, sem travar a atualização por um dia
+// TTL de 6h (subiu de 3h): o chat não chama mais essas tools (ver EXCLUDED_FROM_CHAT em
+// apps/dashboard/src/lib/mcp-tools.ts) e os filtros de /insights viraram opções fixas (não
+// mais texto livre) — com isso o número de combinações possíveis por dia é pequeno e
+// conhecido, e 6h de cache deixa bem mais folga de cota sem travar a atualização por um dia
 // inteiro. O cache é persistido em disco (ver TtlCache): sem isso, cada reinício do servidor
 // MCP (tsx watch em dev, deploy/crash em produção) zerava o cache em memória e a próxima
 // pergunta da IA voltava a gastar cota, mesmo com poucos minutos de uso.
-const CACHE_TTL_MS = 3 * 60 * 60 * 1000;
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 // Confirmado com uma chamada real à API (não documentado publicamente pela Microsoft):
 // cada item do array de resposta é uma métrica (`metricName`), e cada linha de

@@ -18,6 +18,21 @@ const DAYS_OPTIONS = [
 	{ value: '3', label: '3 dias (máximo da API)' },
 ];
 
+// Opções fixas em vez de texto livre: cada valor digitado à mão vira uma cota nova gasta na
+// API do Clarity (a chave de cache é a combinação exata de numOfDays/url/device). Com um
+// conjunto pequeno e conhecido de combinações, dá pra estimar o gasto de cota — texto livre
+// deixava isso ilimitado.
+const DEVICE_OPTIONS = [
+	{ value: 'Desktop', label: 'Desktop' },
+	{ value: 'Mobile', label: 'Mobile' },
+	{ value: 'Tablet', label: 'Tablet' },
+];
+
+const BOOKING_URL_PATTERN = process.env.CLARITY_BOOKING_URL_PATTERN ?? '';
+const PAGE_OPTIONS = BOOKING_URL_PATTERN
+	? [{ value: BOOKING_URL_PATTERN, label: 'Página de agendamento' }]
+	: [];
+
 export default async function InsightsPage({ searchParams }: { searchParams: SearchParams }) {
 	const { url, device, days } = await searchParams;
 	// A API pública do Clarity só aceita 1-3 dias por chamada — não existe "7 dias" ou "30
@@ -52,13 +67,16 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 				values={{ days, url, device }}
 				fields={[
 					{ name: 'days', label: 'Janela de dias', type: 'select', options: DAYS_OPTIONS },
-					{ name: 'url', label: 'URL/rota', type: 'text', placeholder: 'agendamento' },
-					{ name: 'device', label: 'Dispositivo', type: 'text', placeholder: 'Desktop, Mobile' },
+					{ name: 'device', label: 'Dispositivo', type: 'select', options: DEVICE_OPTIONS },
+					...(PAGE_OPTIONS.length > 0
+						? [{ name: 'url', label: 'Página', type: 'select' as const, options: PAGE_OPTIONS }]
+						: []),
 				]}
 			/>
 			<p className="text-muted-foreground -mt-3 text-xs">
-				Cada filtro diferente consome uma cota da API do Clarity na primeira vez (limite: 10
-				requisições/dia) — resultados ficam em cache por 3h depois disso.
+				Filtros fixos (não texto livre): cada combinação diferente consome uma cota da API do
+				Clarity na primeira vez (limite: 10 requisições/dia) — resultados ficam em cache por 6h
+				depois disso.
 			</p>
 
 			{!data ? (

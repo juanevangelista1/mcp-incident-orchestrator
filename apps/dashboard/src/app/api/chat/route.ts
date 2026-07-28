@@ -8,9 +8,19 @@ export async function POST(req: Request) {
 	const { tools, close } = await loadMcpTools();
 
 	const system = [
-		'Você é o assistente do L3 Incident Orchestrator. Use as tools disponíveis (Sentry, Datadog, Clarity) ' +
-			'para responder sobre erros, logs e comportamento de usuários da aplicação monitorada. ' +
+		'Você é o assistente do L3 Incident Orchestrator. Use as tools disponíveis (Sentry, Datadog) ' +
+			'para responder sobre erros e logs da aplicação monitorada. ' +
 			'Sempre prefira chamar uma tool a adivinhar números. Responda em português.',
+		// Sem cache de sessão/conversa, o chat não tem como saber se já gastou cota do Clarity
+		// hoje — cada combinação de filtro que o Gemini decidisse tentar seria uma cota nova
+		// (limite: 10/dia), sem nenhum controle sobre o padrão de chamada. Por isso essas tools
+		// nem são passadas pro modelo (ver EXCLUDED_FROM_CHAT em lib/mcp-tools.ts); sessões,
+		// páginas mais acessadas, rage/dead clicks e o funil de agendamento têm páginas
+		// dedicadas com cache e opções fixas de filtro.
+		'Você NÃO tem acesso a tools do Microsoft Clarity (sessões, páginas mais acessadas, rage/dead clicks, ' +
+			'funil de agendamento). Se o usuário perguntar sobre isso, explique que essa cota é limitada e ' +
+			'direcione para as páginas /insights (visão geral do Clarity) e /reports (comparativos diário/semanal/mensal ' +
+			'e o cenário detectado) em vez de tentar responder sem dado.',
 		todayContextFragment(),
 		projectSlugFragment(),
 		bookingUrlFragment(),

@@ -4,6 +4,13 @@ import { dynamicTool, jsonSchema, ToolSet } from 'ai';
 
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL ?? 'http://localhost:3333/mcp';
 
+// O Gemini pode chamar essas tools com qualquer combinação de numOfDays/url/device que
+// "decidir" — cada combinação nova é uma cota gasta na API do Clarity (limite: 10/dia), e o
+// chat já contribuiu pra estourar essa cota mais de uma vez sem nenhum controle sobre o
+// padrão de chamada. Insights do Clarity ficam de fora do chat; `/insights` e `/reports` já
+// respondem isso com opções fixas (ver FilterForm em insights/page.tsx).
+const EXCLUDED_FROM_CHAT = new Set(['fetch_clarity_insights', 'fetch_clarity_region_insights']);
+
 // Ponte MCP -> AI SDK: descobre as tools do nosso servidor em tempo de execução
 // (tools/list) e expõe cada uma como uma `dynamicTool` que o Gemini pode chamar.
 // Isso evita reimplementar cada tool como function-calling manual — o mesmo
@@ -17,6 +24,7 @@ export async function loadMcpTools(): Promise<{ tools: ToolSet; close: () => Pro
 
 	const tools: ToolSet = {};
 	for (const mcpTool of mcpTools) {
+		if (EXCLUDED_FROM_CHAT.has(mcpTool.name)) continue;
 		tools[mcpTool.name] = dynamicTool({
 			description: mcpTool.description,
 			inputSchema: jsonSchema(mcpTool.inputSchema as any),
