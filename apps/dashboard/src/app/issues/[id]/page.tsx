@@ -5,6 +5,7 @@ import { SentryIssueDetails } from '@/lib/mcp-types';
 export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { IssueInvestigation } from '@/components/issue-investigation';
 
 const LEVEL_DOT: Record<string, string> = {
 	error: 'bg-rose-500',
@@ -32,6 +33,8 @@ export default async function IssueDetailsPage({ params }: { params: Promise<{ i
 						<h1 className="text-xl font-semibold">{data.errorMessage}</h1>
 						<p className="text-muted-foreground text-sm">ID: {data.id}</p>
 					</header>
+
+					<IssueInvestigation issueId={id} />
 
 					{/* Contexto (browser/OS/device/localização) — mesmo painel que a própria UI do Sentry
 					    mostra ao lado do gráfico de eventos. */}

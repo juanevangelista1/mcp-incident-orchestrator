@@ -1,0 +1,63 @@
+'use client';
+
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Search, Loader2 } from 'lucide-react';
+
+// Gera sob demanda (nunca automático no carregamento da página) — cada geração é uma chamada
+// real ao Gemini, mesmo padrão de narrative-report.tsx em /reports.
+export function IssueInvestigation({ issueId }: { issueId: string }) {
+	const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+	const [report, setReport] = useState('');
+	const [error, setError] = useState('');
+
+	async function generate() {
+		setState('loading');
+		setError('');
+		try {
+			const res = await fetch(`/api/issues/${issueId}/narrative`, { method: 'POST' });
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? 'Falha ao gerar investigação.');
+			setReport(data.report);
+			setState('done');
+		} catch (e) {
+			setError(e instanceof Error ? e.message : 'Falha ao gerar investigação.');
+			setState('error');
+		}
+	}
+
+	return (
+		<Card className="border-t-4 border-t-indigo-500/70">
+			<CardHeader>
+				<div className="flex items-center justify-between gap-2">
+					<CardTitle className="flex items-center gap-2">
+						<Search className="text-indigo-600 dark:text-indigo-400 size-4" />
+						Investigação completa
+					</CardTitle>
+					<button
+						type="button"
+						onClick={generate}
+						disabled={state === 'loading'}
+						className="focus-visible:ring-ring inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
+					>
+						{state === 'loading' && <Loader2 className="size-3.5 animate-spin" />}
+						{state === 'loading' ? 'Investigando...' : 'Gerar investigação completa'}
+					</button>
+				</div>
+				<CardDescription>
+					Sintoma → Evidência → Hipótese → Investigação → Correlação → Causa provável → Impacto →
+					Ação recomendada — correlação sempre por período, nunca por sessão individual.
+				</CardDescription>
+			</CardHeader>
+			{(state === 'done' || state === 'error') && (
+				<CardContent>
+					{state === 'error' ? (
+						<p className="text-rose-600 dark:text-rose-400 text-sm">{error}</p>
+					) : (
+						<article className="whitespace-pre-wrap text-sm">{report}</article>
+					)}
+				</CardContent>
+			)}
+		</Card>
+	);
+}
