@@ -219,13 +219,18 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 							{sentryPageRank.length > 0 ? (
 								<div className="flex flex-col gap-1">
 									{sentryPageRank.map((r, i) => (
-										<MetricBar
+										<Link
 											key={`${r.page}-${i}`}
-											label={r.page}
-											value={r.sentryOccurrences}
-											max={sentryPageRank[0].sentryOccurrences}
-											barColor="bg-rose-500/15"
-										/>
+											href={`/issues?route=${encodeURIComponent(r.page)}`}
+											className="block rounded-md hover:bg-accent/60"
+										>
+											<MetricBar
+												label={r.page}
+												value={r.sentryOccurrences}
+												max={sentryPageRank[0].sentryOccurrences}
+												barColor="bg-rose-500/15"
+											/>
+										</Link>
 									))}
 								</div>
 							) : (
@@ -246,13 +251,13 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 							{clarityScriptErrors.length > 0 ? (
 								<div className="flex flex-col gap-1">
 									{clarityScriptErrors.map((p, i) => (
-										<MetricBar
+										<Link
 											key={`${p.url}-${i}`}
-											label={p.url}
-											value={p.count}
-											max={clarityScriptErrors[0].count}
-											barColor="bg-sky-500/15"
-										/>
+											href={`/insights?url=${encodeURIComponent(p.url)}`}
+											className="block rounded-md hover:bg-accent/60"
+										>
+											<MetricBar label={p.url} value={p.count} max={clarityScriptErrors[0].count} barColor="bg-sky-500/15" />
+										</Link>
 									))}
 								</div>
 							) : (

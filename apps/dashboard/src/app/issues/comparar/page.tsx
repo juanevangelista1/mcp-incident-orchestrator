@@ -1,8 +1,10 @@
+import Link from 'next/link';
 import { callMcpTool } from '@/lib/mcp-client';
 import { SentryIssue, ClarityInsights } from '@/lib/mcp-types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageTitle } from '@/components/page-title';
+import { RouteComparisonExport } from '@/components/route-comparison-export';
 import { GitCompare } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -127,9 +129,17 @@ function RouteCard({ snapshot, placeholder }: { snapshot: RouteSnapshot | null; 
 	return (
 		<Card className="border-t-4 border-t-rose-500/70">
 			<CardHeader>
-				<CardTitle className="truncate" title={snapshot.route}>
-					{snapshot.route}
-				</CardTitle>
+				<div className="flex items-start justify-between gap-2">
+					<CardTitle className="truncate" title={snapshot.route}>
+						{snapshot.route}
+					</CardTitle>
+					<RouteComparisonExport
+						route={snapshot.route}
+						issues={snapshot.issues}
+						totalOccurrences={snapshot.totalOccurrences}
+						clarity={snapshot.clarity}
+					/>
+				</div>
 				<CardDescription>Sentry: is:unresolved, últimos resultados</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
@@ -161,7 +171,15 @@ function RouteCard({ snapshot, placeholder }: { snapshot: RouteSnapshot | null; 
 				)}
 
 				<div>
-					<h3 className="mb-1 text-xs font-medium">Top erros</h3>
+					<div className="mb-1 flex items-center justify-between gap-2">
+						<h3 className="text-xs font-medium">Top erros</h3>
+						<Link
+							href={`/issues?route=${encodeURIComponent(snapshot.route)}`}
+							className="text-muted-foreground text-xs hover:underline"
+						>
+							Ver todos →
+						</Link>
+					</div>
 					{top5.length > 0 ? (
 						<div className="flex flex-col gap-1">
 							{top5.map((issue) => (

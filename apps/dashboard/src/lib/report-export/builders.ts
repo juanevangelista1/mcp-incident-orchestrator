@@ -195,3 +195,37 @@ export function buildReportsReport(params: {
 		sections,
 	};
 }
+
+export function buildRouteComparisonReport(params: {
+	route: string;
+	issues: SentryIssue[];
+	totalOccurrences: number;
+	clarity: ClarityInsights | null;
+}): ReportDocument {
+	const { route, issues, totalOccurrences, clarity } = params;
+	const sorted = [...issues].sort((a, b) => b.count - a.count);
+
+	return {
+		title: `Rota: ${route}`,
+		subtitle: 'Sentry: is:unresolved, últimos resultados',
+		generatedAt: new Date(),
+		sections: [
+			{
+				kind: 'kpi',
+				heading: 'Resumo',
+				items: [
+					{ label: 'Issues (Sentry)', value: issues.length },
+					{ label: 'Ocorrências', value: totalOccurrences },
+					{ label: 'Sessões (Clarity)', value: clarity?.totalSessions ?? '—' },
+					{ label: 'Erros de script (Clarity)', value: clarity ? `${clarity.scriptErrorPercent}%` : '—' },
+				],
+			},
+			{
+				kind: 'table',
+				heading: 'Erros desta rota',
+				headers: ['Título', 'Ocorrências'],
+				rows: sorted.map((i) => [i.title, i.count]),
+			},
+		],
+	};
+}
