@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateText } from 'ai';
-import { google } from '@ai-sdk/google';
 import {
 	getSentrySummary,
 	getDatadogSummary,
@@ -9,6 +7,7 @@ import {
 	getClarityBookingInsights,
 	getAwsSummary,
 } from '@/lib/mcp-summaries';
+import { generateWithFallback } from '@/lib/gemini';
 import { insertDailyReport } from '@/db/client';
 
 // Monta um resumo simples e determinístico a partir dos números coletados — não depende
@@ -35,27 +34,17 @@ function buildFallbackSummary(data: {
 	return parts.length > 0 ? parts.join('; ') + '.' : 'Nenhuma fonte disponível para este digest.';
 }
 
-// Tenta enriquecer o resumo com o Gemini; se a chave não estiver configurada ou a chamada
-// falhar por qualquer motivo, cai de volta pro resumo determinístico — o digest não pode
-// depender de um serviço externo instável para simplesmente registrar os números do dia.
-async function buildSummary(
-	fallback: string,
-	raw: Record<string, unknown>,
-): Promise<string> {
-	if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) return fallback;
-
-	try {
-		const { text } = await generateText({
-			model: google(process.env.GEMINI_MODEL ?? 'gemini-flash-latest'),
-			prompt:
-				'Resuma em até 3 frases, em português, o estado da aplicação hoje com base nestes dados ' +
-				`(Sentry/Datadog/Clarity/AWS CloudWatch): ${JSON.stringify(raw)}`,
-		});
-		return text || fallback;
-	} catch (error) {
-		console.error('[daily-digest] Gemini indisponível, usando resumo determinístico:', error);
-		return fallback;
-	}
+// Tenta enriquecer o resumo com o Gemini; generateWithFallback já cuida de cair de volta pro
+// resumo determinístico se a chave não estiver configurada, GEMINI_MOCK estiver ativo ou a
+// chamada falhar por qualquer motivo — o digest não pode depender de um serviço externo
+// instável (e de cota limitada) para simplesmente registrar os números do dia.
+function buildSummary(fallback: string, raw: Record<string, unknown>): Promise<string> {
+	return generateWithFallback({
+		prompt:
+			'Resuma em até 3 frases, em português, o estado da aplicação hoje com base nestes dados ' +
+			`(Sentry/Datadog/Clarity/AWS CloudWatch): ${JSON.stringify(raw)}`,
+		fallback,
+	});
 }
 
 export async function GET(req: NextRequest) {

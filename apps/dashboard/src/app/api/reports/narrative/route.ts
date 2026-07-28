@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { generateText } from 'ai';
-import { google } from '@ai-sdk/google';
 import { listDailyReports } from '@/db/client';
 import { toDailyPoints, baseline, percentChange } from '@/lib/trends';
 import { detectScenario } from '@/lib/scenarios';
+import { getGeminiModel, isGeminiConfigured, isGeminiMocked } from '@/lib/gemini';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,10 +11,20 @@ export const dynamic = 'force-dynamic';
 // usuário colou como exemplo: causa provável + tabela quantitativa + matriz de confiança).
 // Só agora faz sentido gerar isso: antes das Fases C-F não existia série histórica nem motor
 // de cenários pra alimentar o prompt com evidência real, só teria gerado texto genérico.
+//
+// Diferente do digest (que sempre cai num fallback silencioso via generateWithFallback), aqui
+// o erro real precisa chegar ao usuário: é uma ação manual dele clicando em "gerar", não um job
+// de fundo — esconder a falha deixaria o botão parecendo travado sem explicação.
 export async function POST() {
-	if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+	if (!isGeminiConfigured()) {
 		return NextResponse.json(
 			{ error: 'GOOGLE_GENERATIVE_AI_API_KEY não configurada no dashboard.' },
+			{ status: 400 },
+		);
+	}
+	if (isGeminiMocked()) {
+		return NextResponse.json(
+			{ error: 'GEMINI_MOCK está ativo — desative pra gerar um relatório de verdade.' },
 			{ status: 400 },
 		);
 	}
@@ -68,10 +78,7 @@ Dados:
 ${JSON.stringify(evidence, null, 2)}`;
 
 	try {
-		const { text } = await generateText({
-			model: google(process.env.GEMINI_MODEL ?? 'gemini-flash-latest'),
-			prompt,
-		});
+		const { text } = await generateText({ model: getGeminiModel(), prompt });
 		return NextResponse.json({ report: text });
 	} catch (error) {
 		return NextResponse.json(
