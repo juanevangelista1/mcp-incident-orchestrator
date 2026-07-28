@@ -66,10 +66,17 @@ export class SentryService {
 	}
 
 	// Montagem única da query de busca (sintaxe de search do Sentry), reaproveitada por
-	// fetchRecentIssues, countIssues e (indiretamente) summarizeIssues. O wildcard `*` no `url`
-	// permite buscar por um trecho da rota sem saber a URL inteira. O filtro de data usa
-	// `firstSeen`, não `lastSeen`: queremos "erros que surgiram nesse período", que é o que
-	// um filtro de data num dashboard de incidentes normalmente significa.
+	// fetchRecentIssues e countIssues. O filtro de data usa `firstSeen`, não `lastSeen`:
+	// queremos "erros que surgiram nesse período", que é o que um filtro de data num
+	// dashboard de incidentes normalmente significa.
+	//
+	// IMPORTANTE: `route` NUNCA entra aqui — ver `matchesRoute` abaixo. A tag `url` do Sentry
+	// guarda a URL real resolvida (ex: `/imovel/307825/apartamento-.../`), mas todo o resto do
+	// dashboard filtra/agrupa por `culprit` (o padrão de rota do Next.js, ex:
+	// `/imovel/[id]/[slug]`) — são campos diferentes. Buscar `url:*/imovel/[id]/[slug]*` no
+	// servidor sempre voltava vazio (confirmado ao vivo), porque essa string nunca aparece
+	// literalmente na tag `url`. `route` agora filtra client-side por `culprit`, igual ao
+	// campo que a própria UI já usa pra ranquear/comparar páginas.
 	//
 	// Os tokens são unidos por espaço, não por "+": a query inteira passa por
 	// encodeURIComponent (um "+" literal viraria %2B, que o Sentry decodifica de volta como
@@ -78,9 +85,6 @@ export class SentryService {
 		const tokens = ['is:unresolved'];
 		if (params.environment) {
 			tokens.push(`environment:${params.environment}`);
-		}
-		if (params.route) {
-			tokens.push(`url:*${params.route}*`);
 		}
 		if (params.startDate) {
 			tokens.push(`firstSeen:>=${params.startDate}`);
@@ -97,6 +101,10 @@ export class SentryService {
 			tokens.push(params.search.includes(' ') ? `"${params.search}"` : params.search);
 		}
 		return tokens.join(' ');
+	}
+
+	private matchesRoute(issue: SentryIssue, route: string): boolean {
+		return issue.culprit.toLowerCase().includes(route.toLowerCase());
 	}
 
 	// requisição para buscar os erros em lista - Array sem cache para pegar os erros em tempo real.
@@ -119,7 +127,7 @@ export class SentryService {
 		// Fronteira da Anti-Corruption Layer: validamos contra o schema em vez de confiar
 		// cegamente no shape do JSON. Se o Sentry mudar um campo, isso falha aqui, com uma
 		// mensagem clara, em vez de propagar `undefined` silenciosamente para a IA.
-		return sentryIssueSchema.array().parse(
+		const issues = sentryIssueSchema.array().parse(
 			data.map((issue: any) => ({
 				id: issue.id,
 				title: issue.title,
@@ -128,6 +136,8 @@ export class SentryService {
 				permalink: issue.permalink,
 			})),
 		);
+
+		return params.route ? issues.filter((issue) => this.matchesRoute(issue, params.route!)) : issues;
 	}
 
 	// Traduz o "nome amigável" do projeto (slug) para o ID numérico interno que a API de estatísticas exige.
@@ -146,9 +156,17 @@ export class SentryService {
 		return projectId;
 	}
 
-	// Quantidade de erros: usa o endpoint de estatísticas da organização (issues-count),
-	// que devolve só um número, em vez de baixar a lista inteira de issues para contá-la no nosso lado.
+	// Quantidade de erros: usa o endpoint de estatísticas da organização (issues-count), que
+	// devolve só um número, em vez de baixar a lista inteira de issues para contá-la no nosso
+	// lado. Exceção: com filtro de `route`, esse endpoint não serve — ele só entende tags
+	// reais do Sentry (como `url`), não `culprit` — então nesse caso buscamos a lista (mesmo
+	// caminho de `fetchRecentIssues`, que já filtra por culprit) e contamos no nosso lado.
 	public async countIssues(projectSlug: string, params: IssuesQueryParams): Promise<number> {
+		if (params.route) {
+			const issues = await this.fetchRecentIssues(projectSlug, params, 100);
+			return issues.length;
+		}
+
 		const projectId = await this.resolveProjectId(projectSlug);
 		const query = this.buildIssuesQuery(params);
 
