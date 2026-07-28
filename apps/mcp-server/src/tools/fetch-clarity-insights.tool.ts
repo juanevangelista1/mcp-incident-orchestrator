@@ -10,7 +10,7 @@ export function registerFetchClarityInsightsTool(server: McpServer, clarityServi
 		'fetch_clarity_insights',
 		{
 			description:
-				'Busca insights agregados do Microsoft Clarity: sessões, rage/dead clicks, erros de script e páginas mais visitadas (últimos 1 a 3 dias).',
+				'Busca insights agregados do Microsoft Clarity: sessões, rage/dead clicks, erros de script e páginas mais visitadas (últimos 1 a 3 dias). Aceita filtro opcional por url e/ou device (dispositivo).',
 			inputSchema: fetchClarityInsightsInputSchema.shape,
 			outputSchema: clarityInsightsSchema.shape,
 			annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },

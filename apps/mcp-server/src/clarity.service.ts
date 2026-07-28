@@ -7,11 +7,15 @@ import {
 import { TtlCache, cacheFilePath } from './lib/ttl-cache';
 
 // A API pública do Clarity impõe um limite duro de 10 requisições/dia por projeto
-// (imposto pela Microsoft, não por nós). Por isso o TTL aqui é bem mais agressivo que o do
-// Sentry/Datadog (1 hora), e o cache é persistido em disco (ver TtlCache): sem isso, cada
-// reinício do servidor MCP (tsx watch em dev, deploy/crash em produção) zerava o cache em
-// memória e a próxima pergunta da IA voltava a gastar cota, mesmo com poucos minutos de uso.
-const CACHE_TTL_MS = 60 * 60 * 1000;
+// (imposto pela Microsoft, não por nós). Cada combinação distinta de parâmetros
+// (numOfDays/url/device) é uma chave de cache separada — ou seja, um novo gasto de cota.
+// TTL de 3h (em vez de 1h): navegar entre /insights, /insights/agendamento e /issues ao
+// longo do dia com filtros diferentes soma chaves rápido; 3h dá margem pra ficar bem abaixo
+// de 10/dia mesmo testando alguns filtros diferentes, sem travar a atualização por um dia
+// inteiro. O cache é persistido em disco (ver TtlCache): sem isso, cada reinício do servidor
+// MCP (tsx watch em dev, deploy/crash em produção) zerava o cache em memória e a próxima
+// pergunta da IA voltava a gastar cota, mesmo com poucos minutos de uso.
+const CACHE_TTL_MS = 3 * 60 * 60 * 1000;
 
 // Confirmado com uma chamada real à API (não documentado publicamente pela Microsoft):
 // cada item do array de resposta é uma métrica (`metricName`), e cada linha de
@@ -38,6 +42,7 @@ const METRIC_NAMES = {
 interface FetchInsightsParams {
 	numOfDays: number;
 	url?: string;
+	device?: string;
 }
 
 interface RawMetric {
@@ -184,8 +189,9 @@ export class ClarityService {
 		let deadRows = this.rowsFor(metrics, METRIC_NAMES.deadClicks);
 		let scriptRows = this.rowsFor(metrics, METRIC_NAMES.scriptErrors);
 
-		// `url` filtra por um trecho da URL/rota (busca parcial, case-insensitive) — aplicado
-		// depois da chamada, já que a API não tem um parâmetro de filtro por valor de URL.
+		// `url`/`device` filtram por um trecho do respectivo campo (busca parcial,
+		// case-insensitive) — aplicados depois da chamada, já que a API não tem parâmetro de
+		// filtro por valor (só as 3 dimensões pedidas, que vêm todas juntas na mesma resposta).
 		if (params.url) {
 			const needle = params.url.toLowerCase();
 			const matchesUrl = (row: Record<string, any>) =>
@@ -195,6 +201,16 @@ export class ClarityService {
 			rageRows = rageRows.filter(matchesUrl);
 			deadRows = deadRows.filter(matchesUrl);
 			scriptRows = scriptRows.filter(matchesUrl);
+		}
+		if (params.device) {
+			const needle = params.device.toLowerCase();
+			const matchesDevice = (row: Record<string, any>) =>
+				String(this.field(row, 'Device') ?? '').toLowerCase().includes(needle);
+			trafficRows = trafficRows.filter(matchesDevice);
+			engagementRows = engagementRows.filter(matchesDevice);
+			rageRows = rageRows.filter(matchesDevice);
+			deadRows = deadRows.filter(matchesDevice);
+			scriptRows = scriptRows.filter(matchesDevice);
 		}
 
 		const topPages = this.groupSum(trafficRows, 'Url', 'totalSessionCount', 5).map((r) => ({

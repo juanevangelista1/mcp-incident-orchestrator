@@ -13,6 +13,10 @@ export const fetchClarityInsightsInputSchema = z.object({
 		.string()
 		.optional()
 		.describe('Filtra os insights por uma URL/rota específica do site.'),
+	device: z
+		.string()
+		.optional()
+		.describe("Filtra os insights por dispositivo (ex: 'Desktop', 'Mobile'). Busca parcial, case-insensitive."),
 });
 
 // Output limpo. Diferente do Sentry/Datadog, o Clarity já devolve dados agregados —

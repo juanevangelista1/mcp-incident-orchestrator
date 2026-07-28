@@ -6,17 +6,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PageTitle } from '@/components/page-title';
 import { MetricBar } from '@/components/metric-bar';
 import { ShareDonutChart } from '@/components/charts/share-donut-chart';
+import { FilterForm } from '@/components/filter-form';
 import { MousePointerClick } from 'lucide-react';
 
-type SearchParams = Promise<{ url?: string }>;
+type SearchParams = Promise<{ url?: string; device?: string; days?: string }>;
+
+const DAYS_OPTIONS = [
+	{ value: '1', label: '1 dia' },
+	{ value: '2', label: '2 dias' },
+	{ value: '3', label: '3 dias (máximo da API)' },
+];
 
 export default async function InsightsPage({ searchParams }: { searchParams: SearchParams }) {
-	const { url } = await searchParams;
+	const { url, device, days } = await searchParams;
+	// A API pública do Clarity só aceita 1-3 dias por chamada — não existe "7 dias" ou "30
+	// dias" aqui. Pra janelas maiores, use a página /reports (dados históricos já persistidos,
+	// sem gastar cota nova do Clarity).
+	const numOfDays = Math.min(3, Math.max(1, Number(days) || 3));
 
 	let data: ClarityInsights | undefined;
 	let emptyMessage = 'Clarity não configurado no MCP server.';
 	try {
-		const result = await callMcpTool<ClarityInsights>('fetch_clarity_insights', { numOfDays: 3, url });
+		const result = await callMcpTool<ClarityInsights>('fetch_clarity_insights', { numOfDays, url, device });
 		data = result.data;
 		emptyMessage = result.text || emptyMessage;
 	} catch (error: any) {
@@ -30,17 +41,23 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 					icon={MousePointerClick}
 					accent="bg-sky-600/10 text-sky-600 dark:text-sky-400"
 					title="Insights — Microsoft Clarity"
-					subtitle={<p className="text-muted-foreground text-sm">Últimos 3 dias</p>}
+					subtitle={<p className="text-muted-foreground text-sm">Últimos {numOfDays} dia(s)</p>}
 				/>
-				{url && (
-					<a
-						href="/insights"
-						className="focus-visible:ring-ring text-muted-foreground shrink-0 self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
-					>
-						Filtrado por &quot;{url}&quot; — limpar
-					</a>
-				)}
 			</header>
+
+			<FilterForm
+				action="/insights"
+				values={{ days, url, device }}
+				fields={[
+					{ name: 'days', label: 'Janela de dias', type: 'select', options: DAYS_OPTIONS },
+					{ name: 'url', label: 'URL/rota', type: 'text', placeholder: 'agendamento' },
+					{ name: 'device', label: 'Dispositivo', type: 'text', placeholder: 'Desktop, Mobile' },
+				]}
+			/>
+			<p className="text-muted-foreground -mt-3 text-xs">
+				Cada filtro diferente consome uma cota da API do Clarity na primeira vez (limite: 10
+				requisições/dia) — resultados ficam em cache por 3h depois disso.
+			</p>
 
 			{!data ? (
 				<p className="text-muted-foreground text-sm">{emptyMessage}</p>
