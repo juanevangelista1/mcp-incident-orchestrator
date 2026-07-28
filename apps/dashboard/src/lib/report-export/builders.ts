@@ -137,9 +137,10 @@ export function buildReportsReport(params: {
 	months: RollupRow[];
 	sessionsBaseline: Baseline | null;
 	occurrencesBaseline: Baseline | null;
+	bookingBaseline: Baseline | null;
 	scenario: Scenario | null;
 }): ReportDocument {
-	const { points, weeks, months, sessionsBaseline, occurrencesBaseline, scenario } = params;
+	const { points, weeks, months, sessionsBaseline, occurrencesBaseline, bookingBaseline, scenario } = params;
 	const sections: ReportDocument['sections'] = [];
 
 	if (scenario) {
@@ -160,15 +161,15 @@ export function buildReportsReport(params: {
 	sections.push({
 		kind: 'table',
 		heading: 'Semanal',
-		headers: ['Semana (segunda-feira)', 'Sessões', 'Ocorrências', 'Erros de script'],
-		rows: weeks.map((w) => [w.key, w.claritySessions, w.sentryOccurrences, w.clarityScriptErrors]),
+		headers: ['Semana (segunda-feira)', 'Sessões', 'Ocorrências', 'Erros de script', 'Agendamentos'],
+		rows: weeks.map((w) => [w.key, w.claritySessions, w.sentryOccurrences, w.clarityScriptErrors, w.bookingArrivals]),
 	});
 
 	sections.push({
 		kind: 'table',
 		heading: 'Mensal',
-		headers: ['Mês', 'Sessões', 'Ocorrências', 'Erros de script'],
-		rows: months.map((m) => [m.key, m.claritySessions, m.sentryOccurrences, m.clarityScriptErrors]),
+		headers: ['Mês', 'Sessões', 'Ocorrências', 'Erros de script', 'Agendamentos'],
+		rows: months.map((m) => [m.key, m.claritySessions, m.sentryOccurrences, m.clarityScriptErrors, m.bookingArrivals]),
 	});
 
 	sections.push({
@@ -181,6 +182,9 @@ export function buildReportsReport(params: {
 			{ label: 'Ocorrências — média', value: occurrencesBaseline ? occurrencesBaseline.avg.toFixed(0) : '—' },
 			{ label: 'Ocorrências — maior', value: occurrencesBaseline?.max ?? '—' },
 			{ label: 'Ocorrências — menor', value: occurrencesBaseline?.min ?? '—' },
+			{ label: 'Agendamentos — média', value: bookingBaseline ? bookingBaseline.avg.toFixed(0) : '—' },
+			{ label: 'Agendamentos — maior', value: bookingBaseline?.max ?? '—' },
+			{ label: 'Agendamentos — menor', value: bookingBaseline?.min ?? '—' },
 		],
 	});
 

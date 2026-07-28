@@ -64,16 +64,23 @@ export interface RollupRow {
 	sentryOccurrences: number;
 	claritySessions: number;
 	clarityScriptErrors: number;
+	// Soma de chegadas em agendamento na janela (semana/mês) — faltava antes, então o
+	// semanal/mensal não respondiam "quantos leads/agendamentos" nem "taxa de conversão",
+	// só o diário respondia.
+	bookingArrivals: number;
 }
 
 function rollup(points: DailyPoint[], keyFn: (p: DailyPoint) => string): RollupRow[] {
 	const map = new Map<string, RollupRow>();
 	for (const p of points) {
 		const key = keyFn(p);
-		const row = map.get(key) ?? { key, sentryOccurrences: 0, claritySessions: 0, clarityScriptErrors: 0 };
+		const row =
+			map.get(key) ??
+			({ key, sentryOccurrences: 0, claritySessions: 0, clarityScriptErrors: 0, bookingArrivals: 0 } as RollupRow);
 		row.sentryOccurrences += p.sentryOccurrences ?? 0;
 		row.claritySessions += p.claritySessions ?? 0;
 		row.clarityScriptErrors += p.clarityScriptErrors ?? 0;
+		row.bookingArrivals += p.bookingArrivals ?? 0;
 		map.set(key, row);
 	}
 	return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));

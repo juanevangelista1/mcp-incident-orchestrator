@@ -33,6 +33,7 @@ export default async function ReportsPage() {
 	const months = monthlyRollup(points);
 	const sessionsBaseline = baseline(points, 'claritySessions');
 	const occurrencesBaseline = baseline(points, 'sentryOccurrences');
+	const bookingBaseline = baseline(points, 'bookingArrivals');
 
 	const lastDay = points.at(-1);
 	const prevDay = points.at(-2);
@@ -41,6 +42,14 @@ export default async function ReportsPage() {
 	const prevWeek = weeks.at(-2);
 	const lastMonth = months.at(-1);
 	const prevMonth = months.at(-2);
+
+	// Taxa de conversão (proxy): chegadas em agendamento ÷ sessões totais do dia. `null`
+	// quando falta um dos dois — não vira 0%, que enganaria como "conversão zero".
+	const conversionRate = (p: { bookingArrivals: number | null; claritySessions: number | null }) =>
+		p.bookingArrivals != null && p.claritySessions ? (p.bookingArrivals / p.claritySessions) * 100 : null;
+	const lastDayRate = lastDay ? conversionRate(lastDay) : null;
+	const prevDayRate = prevDay ? conversionRate(prevDay) : null;
+	const daysWithBookingData = last14.filter((p) => p.bookingArrivals !== null).length;
 
 	return (
 		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
@@ -69,6 +78,7 @@ export default async function ReportsPage() {
 							months={months}
 							sessionsBaseline={sessionsBaseline}
 							occurrencesBaseline={occurrencesBaseline}
+							bookingBaseline={bookingBaseline}
 							scenario={scenario}
 						/>
 					</div>
@@ -150,19 +160,57 @@ export default async function ReportsPage() {
 						</CardContent>
 					</Card>
 
+					<Card className="border-t-4 border-t-emerald-500/70">
+						<CardHeader>
+							<div className="flex items-center justify-between gap-2">
+								<CardTitle>Taxa de conversão (proxy) por dia</CardTitle>
+								<ChangeBadge percent={percentChange(lastDayRate, prevDayRate)} />
+							</div>
+							<CardDescription>
+								Chegadas em agendamento ÷ sessões totais — proxy de intenção, não confirmação de
+								agendamento concluído. {daysWithBookingData} dia(s) com dado no período.
+							</CardDescription>
+						</CardHeader>
+						<CardContent>
+							{daysWithBookingData > 0 ? (
+								<DailyTrendChart
+									points={last14.map((p) => {
+										const rate = conversionRate(p);
+										return { label: p.date.slice(5), value: rate ? Number(rate.toFixed(1)) : 0 };
+									})}
+									valueLabel="% de chegada"
+									color="#10b981"
+								/>
+							) : (
+								<p className="text-muted-foreground text-sm">
+									Ainda não há dias com <code>CLARITY_BOOKING_URL_PATTERN</code> configurado no
+									período — histórico começa a partir de quando o cron rodar com o filtro ativo.
+								</p>
+							)}
+						</CardContent>
+					</Card>
+
 					<section className="grid gap-6 md:grid-cols-2">
 						<Card>
 							<CardHeader>
 								<CardTitle>Semanal</CardTitle>
-								<CardDescription>Semana atual vs. anterior (sessões)</CardDescription>
+								<CardDescription>Semana atual vs. anterior</CardDescription>
 							</CardHeader>
 							<CardContent>
 								{weeks.length >= 2 ? (
-									<div className="flex items-center gap-3 text-sm">
-										<span>
-											{prevWeek!.claritySessions} → {lastWeek!.claritySessions} sessões
-										</span>
-										<ChangeBadge percent={percentChange(lastWeek!.claritySessions, prevWeek!.claritySessions)} />
+									<div className="flex flex-col gap-2 text-sm">
+										<div className="flex items-center gap-3">
+											<span>
+												{prevWeek!.claritySessions} → {lastWeek!.claritySessions} sessões
+											</span>
+											<ChangeBadge percent={percentChange(lastWeek!.claritySessions, prevWeek!.claritySessions)} />
+										</div>
+										<div className="flex items-center gap-3">
+											<span>
+												{prevWeek!.bookingArrivals} → {lastWeek!.bookingArrivals} agendamentos
+											</span>
+											<ChangeBadge percent={percentChange(lastWeek!.bookingArrivals, prevWeek!.bookingArrivals)} />
+										</div>
 									</div>
 								) : (
 									<p className="text-muted-foreground text-sm">
@@ -175,15 +223,23 @@ export default async function ReportsPage() {
 						<Card>
 							<CardHeader>
 								<CardTitle>Mensal</CardTitle>
-								<CardDescription>Mês atual vs. anterior (sessões)</CardDescription>
+								<CardDescription>Mês atual vs. anterior</CardDescription>
 							</CardHeader>
 							<CardContent>
 								{months.length >= 2 ? (
-									<div className="flex items-center gap-3 text-sm">
-										<span>
-											{prevMonth!.claritySessions} → {lastMonth!.claritySessions} sessões
-										</span>
-										<ChangeBadge percent={percentChange(lastMonth!.claritySessions, prevMonth!.claritySessions)} />
+									<div className="flex flex-col gap-2 text-sm">
+										<div className="flex items-center gap-3">
+											<span>
+												{prevMonth!.claritySessions} → {lastMonth!.claritySessions} sessões
+											</span>
+											<ChangeBadge percent={percentChange(lastMonth!.claritySessions, prevMonth!.claritySessions)} />
+										</div>
+										<div className="flex items-center gap-3">
+											<span>
+												{prevMonth!.bookingArrivals} → {lastMonth!.bookingArrivals} agendamentos
+											</span>
+											<ChangeBadge percent={percentChange(lastMonth!.bookingArrivals, prevMonth!.bookingArrivals)} />
+										</div>
 									</div>
 								) : (
 									<p className="text-muted-foreground text-sm">
@@ -218,6 +274,17 @@ export default async function ReportsPage() {
 										<p>
 											média {occurrencesBaseline.avg.toFixed(0)} · maior {occurrencesBaseline.max} · menor{' '}
 											{occurrencesBaseline.min}
+										</p>
+									) : (
+										<p className="text-muted-foreground">sem dado suficiente</p>
+									)}
+								</div>
+								<div>
+									<p className="text-muted-foreground mb-1 text-xs">Chegadas em agendamento (proxy)</p>
+									{bookingBaseline ? (
+										<p>
+											média {bookingBaseline.avg.toFixed(0)} · maior {bookingBaseline.max} · menor{' '}
+											{bookingBaseline.min}
 										</p>
 									) : (
 										<p className="text-muted-foreground">sem dado suficiente</p>

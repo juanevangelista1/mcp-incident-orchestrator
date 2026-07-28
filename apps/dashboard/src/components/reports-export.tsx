@@ -11,6 +11,7 @@ export function ReportsExport({
 	months,
 	sessionsBaseline,
 	occurrencesBaseline,
+	bookingBaseline,
 	scenario,
 }: {
 	points: DailyPoint[];
@@ -18,12 +19,13 @@ export function ReportsExport({
 	months: RollupRow[];
 	sessionsBaseline: Baseline | null;
 	occurrencesBaseline: Baseline | null;
+	bookingBaseline: Baseline | null;
 	scenario: Scenario | null;
 }) {
 	return (
 		<ReportExportButton
 			buildDocument={() =>
-				buildReportsReport({ points, weeks, months, sessionsBaseline, occurrencesBaseline, scenario })
+				buildReportsReport({ points, weeks, months, sessionsBaseline, occurrencesBaseline, bookingBaseline, scenario })
 			}
 			filenameBase="relatorio-comparativos"
 		/>
