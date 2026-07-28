@@ -6,6 +6,7 @@ import {
 	getDatadogSummary,
 	getClarityInsights,
 	getClarityRegionInsights,
+	getClarityBookingInsights,
 	getAwsSummary,
 } from '@/lib/mcp-summaries';
 import { insertDailyReport } from '@/db/client';
@@ -63,17 +64,19 @@ export async function GET(req: NextRequest) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	const [sentry, datadog, clarity, clarityRegion, aws] = await Promise.all([
+	const [sentry, datadog, clarity, clarityRegion, clarityBooking, aws] = await Promise.all([
 		getSentrySummary(),
 		getDatadogSummary(),
 		getClarityInsights(),
 		// Chamada de dimensões extra (Device/OS/Country) do Clarity — só o digest faz essa
 		// chamada (ver comentário em mcp-summaries.ts), nunca a navegação interativa.
 		getClarityRegionInsights(),
+		// Idem: chamada extra filtrada pela URL de agendamento, só pro digest, só se configurada.
+		getClarityBookingInsights(),
 		getAwsSummary(),
 	]);
 
-	const raw = { sentry, datadog, clarity, clarityRegion, aws };
+	const raw = { sentry, datadog, clarity, clarityRegion, clarityBooking, aws };
 	const fallback = buildFallbackSummary({ sentry, datadog, clarity, aws });
 	const summary = await buildSummary(fallback, raw);
 

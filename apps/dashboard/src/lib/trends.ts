@@ -11,6 +11,9 @@ export interface DailyPoint {
 	clarityRageClicks: number | null;
 	clarityDeadClicks: number | null;
 	clarityScriptErrors: number | null;
+	// Sessões que chegaram na URL de agendamento (proxy de intenção, não confirmação de
+	// conversão) — só existe a partir do dia em que CLARITY_BOOKING_URL_PATTERN foi configurado.
+	bookingArrivals: number | null;
 }
 
 export function toDailyPoints(reports: DailyReport[]): DailyPoint[] {
@@ -30,6 +33,7 @@ export function toDailyPoints(reports: DailyReport[]): DailyPoint[] {
 				clarityRageClicks: raw?.clarity?.rageClicks ?? null,
 				clarityDeadClicks: raw?.clarity?.deadClicks ?? null,
 				clarityScriptErrors: raw?.clarity?.scriptErrors ?? null,
+				bookingArrivals: raw?.clarityBooking?.totalSessions ?? null,
 			};
 		})
 		.sort((a, b) => a.date.localeCompare(b.date));

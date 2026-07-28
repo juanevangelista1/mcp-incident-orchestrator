@@ -8,6 +8,7 @@ import {
 } from '@/lib/mcp-types';
 
 const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
+const BOOKING_URL_PATTERN = process.env.CLARITY_BOOKING_URL_PATTERN ?? '';
 
 // Compartilhado entre a página Overview e o digest diário (cron). Cada fetcher engole seus
 // próprios erros e devolve `null` — o motivo mais comum é um plugin opcional desligado no MCP
@@ -45,4 +46,12 @@ export function getClarityRegionInsights(): Promise<ClarityRegionInsights | null
 
 export function getAwsSummary(): Promise<AwsLogsSummary | null> {
 	return safeCall<AwsLogsSummary>('summarize_aws_logs', {});
+}
+
+// Só chamado pelo digest diário (mesma razão de getClarityRegionInsights: soma à mesma cota
+// de 10/dia do Clarity). Sem CLARITY_BOOKING_URL_PATTERN configurado, nem tenta — evita gastar
+// cota numa chamada que voltaria vazia mesmo.
+export function getClarityBookingInsights(): Promise<ClarityInsights | null> {
+	if (!BOOKING_URL_PATTERN) return Promise.resolve(null);
+	return safeCall<ClarityInsights>('fetch_clarity_insights', { numOfDays: 3, url: BOOKING_URL_PATTERN });
 }

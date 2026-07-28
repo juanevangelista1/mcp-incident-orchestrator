@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { PageTitle } from '@/components/page-title';
 import { DailyTrendChart } from '@/components/charts/daily-trend-chart';
 import { toDailyPoints, percentChange, weeklyRollup, monthlyRollup, baseline } from '@/lib/trends';
-import { FileText, TrendingUp, TrendingDown } from 'lucide-react';
+import { detectScenario } from '@/lib/scenarios';
+import { FileText, TrendingUp, TrendingDown, Microscope } from 'lucide-react';
 
 // Lê o SQLite local a cada request — o histórico muda a cada digest novo, não deve
 // ficar preso ao snapshot do momento do build.
@@ -33,6 +34,7 @@ export default async function ReportsPage() {
 
 	const lastDay = points.at(-1);
 	const prevDay = points.at(-2);
+	const scenario = lastDay ? detectScenario(lastDay, prevDay) : null;
 	const lastWeek = weeks.at(-1);
 	const prevWeek = weeks.at(-2);
 	const lastMonth = months.at(-1);
@@ -68,6 +70,35 @@ export default async function ReportsPage() {
 						por isso essas comparações só existem a partir de quando o digest diário começou a
 						rodar continuamente. Não é possível reconstituir dias anteriores a isso.
 					</p>
+
+					{scenario && (
+						<Card className="border-t-4 border-t-violet-500/70">
+							<CardHeader>
+								<div className="flex items-center gap-2">
+									<Microscope className="text-violet-600 dark:text-violet-400 size-4" />
+									<CardTitle>
+										Cenário {scenario.code} — {scenario.label}
+									</CardTitle>
+								</div>
+								<CardDescription>
+									Correlação agregada por dia (não por sessão individual) entre erros, tráfego e chegadas
+									em agendamento — descreve o que aconteceu, não afirma causa e efeito por si só.
+								</CardDescription>
+							</CardHeader>
+							<CardContent className="flex flex-col gap-3">
+								<p className="text-sm">{scenario.description}</p>
+								{scenario.evidence.length > 0 && (
+									<div className="flex flex-wrap gap-2">
+										{scenario.evidence.map((e) => (
+											<Badge key={e} variant="outline">
+												{e}
+											</Badge>
+										))}
+									</div>
+								)}
+							</CardContent>
+						</Card>
+					)}
 
 					<Card className="border-t-4 border-t-emerald-500/70">
 						<CardHeader>
