@@ -2,14 +2,41 @@ import { listDailyReports } from '@/db/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageTitle } from '@/components/page-title';
-import { FileText } from 'lucide-react';
+import { TrendBars } from '@/components/trend-bars';
+import { toDailyPoints, percentChange, weeklyRollup, monthlyRollup, baseline } from '@/lib/trends';
+import { FileText, TrendingUp, TrendingDown } from 'lucide-react';
 
 // Lê o SQLite local a cada request — o histórico muda a cada digest novo, não deve
 // ficar preso ao snapshot do momento do build.
 export const dynamic = 'force-dynamic';
 
+function ChangeBadge({ percent }: { percent: number | null }) {
+	if (percent === null) return <Badge variant="outline">sem dado suficiente</Badge>;
+	const up = percent >= 0;
+	return (
+		<Badge className={up ? 'bg-emerald-600/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-600/10 text-rose-600 dark:text-rose-400'}>
+			{up ? <TrendingUp className="mr-1 size-3" /> : <TrendingDown className="mr-1 size-3" />}
+			{percent >= 0 ? '+' : ''}
+			{percent.toFixed(1)}%
+		</Badge>
+	);
+}
+
 export default async function ReportsPage() {
 	const reports = listDailyReports();
+	const points = toDailyPoints(reports);
+	const last14 = points.slice(-14);
+	const weeks = weeklyRollup(points);
+	const months = monthlyRollup(points);
+	const sessionsBaseline = baseline(points, 'claritySessions');
+	const occurrencesBaseline = baseline(points, 'sentryOccurrences');
+
+	const lastDay = points.at(-1);
+	const prevDay = points.at(-2);
+	const lastWeek = weeks.at(-1);
+	const prevWeek = weeks.at(-2);
+	const lastMonth = months.at(-1);
+	const prevMonth = months.at(-2);
 
 	return (
 		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
@@ -33,6 +60,129 @@ export default async function ReportsPage() {
 					</a>
 				)}
 			</header>
+
+			{reports.length > 0 && (
+				<section className="flex flex-col gap-6">
+					<p className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
+						O Clarity só permite consultar 1–3 dias por chamada e não tem endpoint de histórico —
+						por isso essas comparações só existem a partir de quando o digest diário começou a
+						rodar continuamente. Não é possível reconstituir dias anteriores a isso.
+					</p>
+
+					<Card className="border-t-4 border-t-emerald-500/70">
+						<CardHeader>
+							<div className="flex items-center justify-between gap-2">
+								<CardTitle>Diário (últimos {last14.length} dia(s))</CardTitle>
+								<ChangeBadge percent={percentChange(lastDay?.claritySessions ?? null, prevDay?.claritySessions ?? null)} />
+							</div>
+							<CardDescription>Sessões (Clarity) por dia, variação vs. dia anterior</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<TrendBars
+								points={last14.map((p) => ({ label: p.date.slice(5), value: p.claritySessions ?? 0 }))}
+								valueLabel="sessão(ões)"
+								color="bg-sky-500"
+							/>
+						</CardContent>
+					</Card>
+
+					<Card className="border-t-4 border-t-rose-500/70">
+						<CardHeader>
+							<div className="flex items-center justify-between gap-2">
+								<CardTitle>Ocorrências de erro (Sentry) por dia</CardTitle>
+								<ChangeBadge
+									percent={percentChange(lastDay?.sentryOccurrences ?? null, prevDay?.sentryOccurrences ?? null)}
+								/>
+							</div>
+							<CardDescription>Variação vs. dia anterior</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<TrendBars
+								points={last14.map((p) => ({ label: p.date.slice(5), value: p.sentryOccurrences ?? 0 }))}
+								valueLabel="ocorrência(s)"
+								color="bg-rose-500"
+							/>
+						</CardContent>
+					</Card>
+
+					<section className="grid gap-6 md:grid-cols-2">
+						<Card>
+							<CardHeader>
+								<CardTitle>Semanal</CardTitle>
+								<CardDescription>Semana atual vs. anterior (sessões)</CardDescription>
+							</CardHeader>
+							<CardContent>
+								{weeks.length >= 2 ? (
+									<div className="flex items-center gap-3 text-sm">
+										<span>
+											{prevWeek!.claritySessions} → {lastWeek!.claritySessions} sessões
+										</span>
+										<ChangeBadge percent={percentChange(lastWeek!.claritySessions, prevWeek!.claritySessions)} />
+									</div>
+								) : (
+									<p className="text-muted-foreground text-sm">
+										Ainda não há duas semanas completas de digest para comparar.
+									</p>
+								)}
+							</CardContent>
+						</Card>
+
+						<Card>
+							<CardHeader>
+								<CardTitle>Mensal</CardTitle>
+								<CardDescription>Mês atual vs. anterior (sessões)</CardDescription>
+							</CardHeader>
+							<CardContent>
+								{months.length >= 2 ? (
+									<div className="flex items-center gap-3 text-sm">
+										<span>
+											{prevMonth!.claritySessions} → {lastMonth!.claritySessions} sessões
+										</span>
+										<ChangeBadge percent={percentChange(lastMonth!.claritySessions, prevMonth!.claritySessions)} />
+									</div>
+								) : (
+									<p className="text-muted-foreground text-sm">
+										Ainda não há dois meses completos de digest para comparar.
+									</p>
+								)}
+							</CardContent>
+						</Card>
+					</section>
+
+					<Card>
+						<CardHeader>
+							<CardTitle>Baseline (comportamento normal)</CardTitle>
+							<CardDescription>Média / maior / menor valor da janela disponível</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<div className="grid gap-4 text-sm sm:grid-cols-2">
+								<div>
+									<p className="text-muted-foreground mb-1 text-xs">Sessões (Clarity)</p>
+									{sessionsBaseline ? (
+										<p>
+											média {sessionsBaseline.avg.toFixed(0)} · maior {sessionsBaseline.max} · menor{' '}
+											{sessionsBaseline.min}
+										</p>
+									) : (
+										<p className="text-muted-foreground">sem dado suficiente</p>
+									)}
+								</div>
+								<div>
+									<p className="text-muted-foreground mb-1 text-xs">Ocorrências de erro (Sentry)</p>
+									{occurrencesBaseline ? (
+										<p>
+											média {occurrencesBaseline.avg.toFixed(0)} · maior {occurrencesBaseline.max} · menor{' '}
+											{occurrencesBaseline.min}
+										</p>
+									) : (
+										<p className="text-muted-foreground">sem dado suficiente</p>
+									)}
+								</div>
+							</div>
+						</CardContent>
+					</Card>
+				</section>
+			)}
 
 			{reports.length === 0 ? (
 				<p className="text-muted-foreground text-sm">
