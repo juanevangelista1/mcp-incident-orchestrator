@@ -36,3 +36,22 @@ export const clarityInsightsSchema = z.object({
 });
 
 export type ClarityInsights = z.infer<typeof clarityInsightsSchema>;
+
+// Segunda chamada, separada da principal (dims diferentes: Device/OS/Country em vez de
+// Url/Device/Browser). Chamada só 1x/dia pelo digest — nunca pela navegação interativa do
+// dashboard — para não competir com a cota de 10 requisições/dia do Clarity.
+export const fetchClarityRegionInsightsInputSchema = z.object({
+	numOfDays: z
+		.number()
+		.min(1)
+		.max(3)
+		.default(3)
+		.describe('Janela de dias (a API pública do Clarity só permite 1 a 3 dias).'),
+});
+
+export const clarityRegionInsightsSchema = z.object({
+	sessionsByOS: z.array(z.object({ os: z.string(), count: z.number() })),
+	sessionsByCountry: z.array(z.object({ country: z.string(), count: z.number() })),
+});
+
+export type ClarityRegionInsights = z.infer<typeof clarityRegionInsightsSchema>;

@@ -1,4 +1,9 @@
-import { ClarityInsights, clarityInsightsSchema } from './clarity.schema';
+import {
+	ClarityInsights,
+	clarityInsightsSchema,
+	ClarityRegionInsights,
+	clarityRegionInsightsSchema,
+} from './clarity.schema';
 import { TtlCache, cacheFilePath } from './lib/ttl-cache';
 
 // A API pública do Clarity impõe um limite duro de 10 requisições/dia por projeto
@@ -15,6 +20,13 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 // `rageClickCount`). É o `metricName` do item pai que diz o que aquela linha representa.
 // Quando as 3 dimensões abaixo são pedidas, cada linha também traz `Url`, `Device` e
 // `Browser` (exatamente com essa capitalização) referentes ao recorte daquela linha.
+//
+// Limitação observada (não documentada pela Microsoft): `information[]` parece truncar em
+// ~1000 linhas por métrica em projetos de alto tráfego, e os totais somados a partir dela
+// variam um pouco entre chamadas muito próximas mesmo pedindo a mesma janela de dias —
+// provavelmente amostragem/ordenação não determinística do lado da API, não um bug daqui
+// (verificado comparando duas chamadas reais segundos uma da outra). Trate os totais como
+// aproximações "de boa-fé" da API, não como contagem exata garantida.
 const METRIC_NAMES = {
 	traffic: 'Traffic',
 	engagement: 'EngagementTime',
@@ -39,6 +51,13 @@ export class ClarityService {
 		CACHE_TTL_MS,
 		500,
 		cacheFilePath(__dirname, 'clarity-insights.json'),
+	);
+	// Cache separado: essa chamada usa outras dimensões (Device/OS/Country) e só é feita pelo
+	// digest diário (nunca pela navegação interativa), então tem seu próprio orçamento de cota.
+	private readonly regionCache = new TtlCache<ClarityRegionInsights>(
+		CACHE_TTL_MS,
+		500,
+		cacheFilePath(__dirname, 'clarity-region-insights.json'),
 	);
 
 	constructor() {
@@ -131,6 +150,21 @@ export class ClarityService {
 		return total;
 	}
 
+	// Requisição bruta compartilhada pelas duas chamadas do Clarity (insights principais e
+	// breakdown de região) — só muda a lista de dimensões pedida.
+	private async fetchRawMetrics(numOfDays: number, dimensions: string[]): Promise<RawMetric[]> {
+		const query = new URLSearchParams({ numOfDays: String(numOfDays) });
+		dimensions.forEach((dim, i) => query.set(`dimension${i + 1}`, dim));
+
+		const url = `https://www.clarity.ms/export-data/api/v1/project-live-insights?${query.toString()}`;
+		const response = await fetch(url, { headers: { Authorization: `Bearer ${this.apiToken}` } });
+		await this.assertOk(response);
+
+		const data = (await response.json()) as RawMetric[];
+		console.error('[CLARITY RAW]', JSON.stringify(data).slice(0, 500));
+		return Array.isArray(data) ? data : [];
+	}
+
 	public async fetchInsights(params: FetchInsightsParams): Promise<ClarityInsights> {
 		const cacheKey = JSON.stringify(params);
 		const cached = this.cache.get(cacheKey);
@@ -140,24 +174,9 @@ export class ClarityService {
 		}
 
 		console.error('[CACHE MISS] Buscando insights na API do Clarity (consome cota diária).');
-		const query = new URLSearchParams({ numOfDays: String(params.numOfDays) });
 		// Sempre pedimos as 3 dimensões (teto da API): sem isso, os detalhamentos por página/
 		// dispositivo/navegador não vêm na resposta — só os totais agregados.
-		query.set('dimension1', 'URL');
-		query.set('dimension2', 'Device');
-		query.set('dimension3', 'Browser');
-
-		const url = `https://www.clarity.ms/export-data/api/v1/project-live-insights?${query.toString()}`;
-		const response = await fetch(url, {
-			headers: { Authorization: `Bearer ${this.apiToken}` },
-		});
-
-		await this.assertOk(response);
-
-		const data = (await response.json()) as RawMetric[];
-		console.error('[CLARITY RAW]', JSON.stringify(data).slice(0, 500));
-
-		const metrics = Array.isArray(data) ? data : [];
+		const metrics = await this.fetchRawMetrics(params.numOfDays, ['URL', 'Device', 'Browser']);
 
 		let trafficRows = this.rowsFor(metrics, METRIC_NAMES.traffic);
 		let engagementRows = this.rowsFor(metrics, METRIC_NAMES.engagement);
@@ -219,6 +238,38 @@ export class ClarityService {
 		});
 
 		this.cache.set(cacheKey, result);
+		return result;
+	}
+
+	// Breakdown por Device/OS/Country — chamada separada da principal, com dimensões
+	// diferentes (a API do Clarity aceita no máximo 3 dimensões por requisição, e a chamada
+	// principal já usa URL+Device+Browser). Só o digest diário chama este método: assim o
+	// custo extra de cota fica limitado à cadência do próprio cron (~1x/dia), sem competir com
+	// a navegação interativa do dashboard pela cota de 10 requisições/dia do Clarity.
+	public async fetchRegionBreakdown(params: { numOfDays: number }): Promise<ClarityRegionInsights> {
+		const cacheKey = JSON.stringify(params);
+		const cached = this.regionCache.get(cacheKey);
+		if (cached) {
+			console.error('[CACHE HIT] Retornando breakdown de região do Clarity da memória.');
+			return cached;
+		}
+
+		console.error('[CACHE MISS] Buscando breakdown de região na API do Clarity (consome cota diária).');
+		const metrics = await this.fetchRawMetrics(params.numOfDays, ['Device', 'OS', 'Country']);
+		const trafficRows = this.rowsFor(metrics, METRIC_NAMES.traffic);
+
+		const result = clarityRegionInsightsSchema.parse({
+			sessionsByOS: this.groupSum(trafficRows, 'OS', 'totalSessionCount', 5).map((r) => ({
+				os: r.key,
+				count: r.count,
+			})),
+			sessionsByCountry: this.groupSum(trafficRows, 'Country', 'totalSessionCount', 5).map((r) => ({
+				country: r.key,
+				count: r.count,
+			})),
+		});
+
+		this.regionCache.set(cacheKey, result);
 		return result;
 	}
 }

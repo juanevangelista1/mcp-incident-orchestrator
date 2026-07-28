@@ -1,5 +1,11 @@
 import { callMcpTool } from '@/lib/mcp-client';
-import { ClarityInsights, DatadogLogsSummary, SentryIssuesSummary, AwsLogsSummary } from '@/lib/mcp-types';
+import {
+	ClarityInsights,
+	ClarityRegionInsights,
+	DatadogLogsSummary,
+	SentryIssuesSummary,
+	AwsLogsSummary,
+} from '@/lib/mcp-types';
 
 const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
 
@@ -29,6 +35,12 @@ export function getDatadogSummary(): Promise<DatadogLogsSummary | null> {
 
 export function getClarityInsights(): Promise<ClarityInsights | null> {
 	return safeCall<ClarityInsights>('fetch_clarity_insights', { numOfDays: 3 });
+}
+
+// Só o digest diário deve chamar isso (ver comentário na tool): soma à mesma cota de
+// 10 requisições/dia do Clarity que `fetch_clarity_insights` já usa.
+export function getClarityRegionInsights(): Promise<ClarityRegionInsights | null> {
+	return safeCall<ClarityRegionInsights>('fetch_clarity_region_insights', { numOfDays: 3 });
 }
 
 export function getAwsSummary(): Promise<AwsLogsSummary | null> {

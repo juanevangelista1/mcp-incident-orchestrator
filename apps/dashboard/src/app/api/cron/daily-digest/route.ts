@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateText } from 'ai';
 import { google } from '@ai-sdk/google';
-import { getSentrySummary, getDatadogSummary, getClarityInsights, getAwsSummary } from '@/lib/mcp-summaries';
+import {
+	getSentrySummary,
+	getDatadogSummary,
+	getClarityInsights,
+	getClarityRegionInsights,
+	getAwsSummary,
+} from '@/lib/mcp-summaries';
 import { insertDailyReport } from '@/db/client';
 
 // Monta um resumo simples e determinístico a partir dos números coletados — não depende
@@ -57,14 +63,17 @@ export async function GET(req: NextRequest) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	const [sentry, datadog, clarity, aws] = await Promise.all([
+	const [sentry, datadog, clarity, clarityRegion, aws] = await Promise.all([
 		getSentrySummary(),
 		getDatadogSummary(),
 		getClarityInsights(),
+		// Chamada de dimensões extra (Device/OS/Country) do Clarity — só o digest faz essa
+		// chamada (ver comentário em mcp-summaries.ts), nunca a navegação interativa.
+		getClarityRegionInsights(),
 		getAwsSummary(),
 	]);
 
-	const raw = { sentry, datadog, clarity, aws };
+	const raw = { sentry, datadog, clarity, clarityRegion, aws };
 	const fallback = buildFallbackSummary({ sentry, datadog, clarity, aws });
 	const summary = await buildSummary(fallback, raw);
 

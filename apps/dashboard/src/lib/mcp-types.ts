@@ -72,6 +72,11 @@ export interface ClarityInsights {
 	lowEngagementSessions: number;
 }
 
+export interface ClarityRegionInsights {
+	sessionsByOS: { os: string; count: number }[];
+	sessionsByCountry: { country: string; count: number }[];
+}
+
 export interface AwsLogEntry {
 	id: string;
 	timestamp: string;

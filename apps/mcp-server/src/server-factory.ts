@@ -12,6 +12,7 @@ import { registerCountDatadogLogsTool } from './tools/count-datadog-logs.tool.js
 import { registerSummarizeDatadogLogsTool } from './tools/summarize-datadog-logs.tool.js';
 import { registerDatadogLogDetailsTool } from './tools/datadog-log-details.tool.js';
 import { registerFetchClarityInsightsTool } from './tools/fetch-clarity-insights.tool.js';
+import { registerFetchClarityRegionInsightsTool } from './tools/fetch-clarity-region-insights.tool.js';
 import { registerFetchAwsLogsTool } from './tools/fetch-aws-logs.tool.js';
 import { registerCountAwsLogsTool } from './tools/count-aws-logs.tool.js';
 import { registerSummarizeAwsLogsTool } from './tools/summarize-aws-logs.tool.js';
@@ -76,6 +77,7 @@ export function buildMcpServer(services: OrchestratorServices): McpServer {
 
 	if (services.clarity) {
 		registerFetchClarityInsightsTool(server, services.clarity);
+		registerFetchClarityRegionInsightsTool(server, services.clarity);
 	}
 
 	if (services.aws) {
