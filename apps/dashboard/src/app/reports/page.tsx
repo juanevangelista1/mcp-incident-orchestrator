@@ -2,7 +2,7 @@ import { listDailyReports } from '@/db/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageTitle } from '@/components/page-title';
-import { TrendBars } from '@/components/trend-bars';
+import { DailyTrendChart } from '@/components/charts/daily-trend-chart';
 import { toDailyPoints, percentChange, weeklyRollup, monthlyRollup, baseline } from '@/lib/trends';
 import { FileText, TrendingUp, TrendingDown } from 'lucide-react';
 
@@ -78,10 +78,10 @@ export default async function ReportsPage() {
 							<CardDescription>Sessões (Clarity) por dia, variação vs. dia anterior</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<TrendBars
+							<DailyTrendChart
 								points={last14.map((p) => ({ label: p.date.slice(5), value: p.claritySessions ?? 0 }))}
 								valueLabel="sessão(ões)"
-								color="bg-sky-500"
+								color="#0ea5e9"
 							/>
 						</CardContent>
 					</Card>
@@ -97,10 +97,10 @@ export default async function ReportsPage() {
 							<CardDescription>Variação vs. dia anterior</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<TrendBars
+							<DailyTrendChart
 								points={last14.map((p) => ({ label: p.date.slice(5), value: p.sentryOccurrences ?? 0 }))}
 								valueLabel="ocorrência(s)"
-								color="bg-rose-500"
+								color="#f43f5e"
 							/>
 						</CardContent>
 					</Card>

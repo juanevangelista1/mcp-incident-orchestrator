@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageTitle } from '@/components/page-title';
 import { MetricBar } from '@/components/metric-bar';
+import { ShareDonutChart } from '@/components/charts/share-donut-chart';
 import { MousePointerClick } from 'lucide-react';
 
 type SearchParams = Promise<{ url?: string }>;
@@ -189,21 +190,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 								<CardTitle>Sessões por dispositivo</CardTitle>
 							</CardHeader>
 							<CardContent>
-								{data.sessionsByDevice.length > 0 ? (
-									<div className="flex flex-col gap-1">
-										{data.sessionsByDevice.map((d) => (
-											<MetricBar
-												key={d.device}
-												label={d.device}
-												value={d.count}
-												max={data.sessionsByDevice[0].count}
-												barColor="bg-sky-500/15"
-											/>
-										))}
-									</div>
-								) : (
-									<p className="text-muted-foreground text-sm">Sem dados de dispositivo.</p>
-								)}
+								<ShareDonutChart data={data.sessionsByDevice.map((d) => ({ name: d.device, value: d.count }))} />
 							</CardContent>
 						</Card>
 
@@ -212,21 +199,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 								<CardTitle>Sessões por navegador</CardTitle>
 							</CardHeader>
 							<CardContent>
-								{data.sessionsByBrowser.length > 0 ? (
-									<div className="flex flex-col gap-1">
-										{data.sessionsByBrowser.map((b) => (
-											<MetricBar
-												key={b.browser}
-												label={b.browser}
-												value={b.count}
-												max={data.sessionsByBrowser[0].count}
-												barColor="bg-sky-500/15"
-											/>
-										))}
-									</div>
-								) : (
-									<p className="text-muted-foreground text-sm">Sem dados de navegador.</p>
-								)}
+								<ShareDonutChart data={data.sessionsByBrowser.map((b) => ({ name: b.browser, value: b.count }))} />
 							</CardContent>
 						</Card>
 					</section>
