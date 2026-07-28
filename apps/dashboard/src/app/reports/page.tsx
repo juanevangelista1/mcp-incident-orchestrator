@@ -5,6 +5,7 @@ import { PageTitle } from '@/components/page-title';
 import { DailyTrendChart } from '@/components/charts/daily-trend-chart';
 import { toDailyPoints, percentChange, weeklyRollup, monthlyRollup, baseline } from '@/lib/trends';
 import { detectScenario } from '@/lib/scenarios';
+import { NarrativeReport } from '@/components/narrative-report';
 import { FileText, TrendingUp, TrendingDown, Microscope } from 'lucide-react';
 
 // Lê o SQLite local a cada request — o histórico muda a cada digest novo, não deve
@@ -99,6 +100,8 @@ export default async function ReportsPage() {
 							</CardContent>
 						</Card>
 					)}
+
+					<NarrativeReport />
 
 					<Card className="border-t-4 border-t-emerald-500/70">
 						<CardHeader>
