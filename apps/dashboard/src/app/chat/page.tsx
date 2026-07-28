@@ -7,7 +7,7 @@ import { PageTitle } from '@/components/page-title';
 import { MessageCircle } from 'lucide-react';
 
 export default function ChatPage() {
-	const { messages, sendMessage, status } = useChat();
+	const { messages, sendMessage, status, error } = useChat();
 	const [input, setInput] = useState('');
 
 	function handleSubmit(e: React.FormEvent) {
@@ -75,6 +75,11 @@ export default function ChatPage() {
 					{status === 'submitted' || status === 'streaming' ? (
 						<p className="text-muted-foreground text-xs">Pensando…</p>
 					) : null}
+					{error && (
+						<div className="border-destructive/50 bg-destructive/10 text-destructive self-start rounded-2xl border px-4 py-2.5 text-sm">
+							{error.message}
+						</div>
+					)}
 				</CardContent>
 			</Card>
 

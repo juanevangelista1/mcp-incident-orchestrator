@@ -60,6 +60,14 @@ export async function downloadAsPdf(doc: ReportDocument, filenameBase: string): 
 				y += 12;
 				pdf.setTextColor(0);
 			}
+			// Sem isso, colunas de cabeçalho curto (ex: "Severidade", "Ocorrências") ficam
+			// espremidas pelas colunas de texto longo (título do erro) e o autoTable quebra o
+			// cabeçalho letra por letra por falta de espaço em branco pra quebrar a palavra.
+			// Largura mínima proporcional ao tamanho do próprio texto do cabeçalho resolve pra
+			// qualquer tabela, sem precisar hardcodar nomes de coluna aqui.
+			const columnStyles = Object.fromEntries(
+				section.headers.map((h, i) => [i, { minCellWidth: h.length * 6 + 14 }]),
+			);
 			autoTable(pdf, {
 				startY: y,
 				head: [section.headers],
@@ -67,6 +75,7 @@ export async function downloadAsPdf(doc: ReportDocument, filenameBase: string): 
 				margin: { left: MARGIN, right: MARGIN },
 				styles: { fontSize: 8, cellPadding: 4 },
 				headStyles: { fillColor: [15, 23, 42] },
+				columnStyles,
 			});
 			// `lastAutoTable` é anexado pelo plugin ao objeto pdf em tempo de execução — não faz
 			// parte do tipo público do jsPDF, daí o cast.
