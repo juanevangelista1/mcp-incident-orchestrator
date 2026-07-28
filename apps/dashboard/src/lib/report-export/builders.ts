@@ -30,9 +30,14 @@ export function buildInsightsReport(params: {
 				heading: 'Resumo',
 				items: [
 					{ label: 'Sessões', value: data.totalSessions },
-					{ label: 'Rage clicks', value: data.rageClicks },
-					{ label: 'Dead clicks', value: data.deadClicks },
-					{ label: 'Erros de script', value: data.scriptErrors },
+					{ label: 'Cliques contínuos (rage)', value: `${data.rageClickPercent}% (${data.rageClicks} sessão(ões))` },
+					{ label: 'Cliques mortos (dead)', value: `${data.deadClickPercent}% (${data.deadClicks} sessão(ões))` },
+					{ label: 'Erros de script', value: `${data.scriptErrorPercent}% (${data.scriptErrors} sessão(ões))` },
+					{
+						label: 'Rolagem excessiva',
+						value: `${data.excessiveScrollPercent}% (${data.excessiveScrollSessions} sessão(ões))`,
+					},
+					{ label: 'Retornos rápidos', value: `${data.quickBackPercent}% (${data.quickBackSessions} sessão(ões))` },
 					{ label: 'Baixo engajamento (estimativa, não oficial)', value: data.lowEngagementSessions },
 				],
 			},

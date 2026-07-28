@@ -37,6 +37,11 @@ const METRIC_NAMES = {
 	rageClicks: 'RageClickCount',
 	deadClicks: 'DeadClickCount',
 	scriptErrors: 'ScriptErrorCount',
+	// Já vinham na mesma resposta da chamada principal (a API sempre devolve o conjunto fixo de
+	// métricas, filtramos client-side por metricName) — só não líamos essas duas ainda.
+	// "Rolagem excessiva" e "Retornos rápidos" na UI web do próprio Clarity.
+	excessiveScroll: 'ExcessiveScroll',
+	quickBackClicks: 'QuickbackClick',
 } as const;
 
 interface FetchInsightsParams {
@@ -102,6 +107,12 @@ export class ClarityService {
 
 	private sum(rows: Record<string, any>[], valueField: string): number {
 		return rows.reduce((total, row) => total + (Number(this.field(row, valueField)) || 0), 0);
+	}
+
+	// Arredondado a 2 casas, igual ao estilo "23,71%" que a própria UI web do Clarity mostra.
+	private percentOf(part: number, total: number): number {
+		if (total === 0) return 0;
+		return Math.round((part / total) * 10000) / 100;
 	}
 
 	// Agrupa linhas por um campo de dimensão (Url/Device/Browser) somando o campo de valor,
@@ -188,6 +199,8 @@ export class ClarityService {
 		let rageRows = this.rowsFor(metrics, METRIC_NAMES.rageClicks);
 		let deadRows = this.rowsFor(metrics, METRIC_NAMES.deadClicks);
 		let scriptRows = this.rowsFor(metrics, METRIC_NAMES.scriptErrors);
+		let excessiveScrollRows = this.rowsFor(metrics, METRIC_NAMES.excessiveScroll);
+		let quickBackRows = this.rowsFor(metrics, METRIC_NAMES.quickBackClicks);
 
 		// `url`/`device` filtram por um trecho do respectivo campo (busca parcial,
 		// case-insensitive) — aplicados depois da chamada, já que a API não tem parâmetro de
@@ -201,6 +214,8 @@ export class ClarityService {
 			rageRows = rageRows.filter(matchesUrl);
 			deadRows = deadRows.filter(matchesUrl);
 			scriptRows = scriptRows.filter(matchesUrl);
+			excessiveScrollRows = excessiveScrollRows.filter(matchesUrl);
+			quickBackRows = quickBackRows.filter(matchesUrl);
 		}
 		if (params.device) {
 			const needle = params.device.toLowerCase();
@@ -211,6 +226,8 @@ export class ClarityService {
 			rageRows = rageRows.filter(matchesDevice);
 			deadRows = deadRows.filter(matchesDevice);
 			scriptRows = scriptRows.filter(matchesDevice);
+			excessiveScrollRows = excessiveScrollRows.filter(matchesDevice);
+			quickBackRows = quickBackRows.filter(matchesDevice);
 		}
 
 		const topPages = this.groupSum(trafficRows, 'Url', 'totalSessionCount', 5).map((r) => ({
@@ -238,12 +255,27 @@ export class ClarityService {
 			count: r.count,
 		}));
 		const lowEngagementSessions = this.lowEngagementSessions(trafficRows, engagementRows);
+		const totalSessions = this.sum(trafficRows, 'totalSessionCount');
+		const rageClicks = this.sum(rageRows, 'sessionsCount');
+		const deadClicks = this.sum(deadRows, 'sessionsCount');
+		const scriptErrors = this.sum(scriptRows, 'sessionsCount');
+		const excessiveScrollSessions = this.sum(excessiveScrollRows, 'sessionsCount');
+		const quickBackSessions = this.sum(quickBackRows, 'sessionsCount');
 
 		const result = clarityInsightsSchema.parse({
-			totalSessions: this.sum(trafficRows, 'totalSessionCount'),
-			rageClicks: this.sum(rageRows, 'sessionsCount'),
-			deadClicks: this.sum(deadRows, 'sessionsCount'),
-			scriptErrors: this.sum(scriptRows, 'sessionsCount'),
+			totalSessions,
+			rageClicks,
+			deadClicks,
+			scriptErrors,
+			// Mesmo estilo de exibição da própria UI web do Clarity ("X% — N sessões"): % de
+			// sessões afetadas, não uma contagem solta sem contexto do tamanho da amostra.
+			rageClickPercent: this.percentOf(rageClicks, totalSessions),
+			deadClickPercent: this.percentOf(deadClicks, totalSessions),
+			scriptErrorPercent: this.percentOf(scriptErrors, totalSessions),
+			excessiveScrollSessions,
+			excessiveScrollPercent: this.percentOf(excessiveScrollSessions, totalSessions),
+			quickBackSessions,
+			quickBackPercent: this.percentOf(quickBackSessions, totalSessions),
 			topPages,
 			rageClicksByPage,
 			deadClicksByPage,

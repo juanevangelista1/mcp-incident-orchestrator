@@ -26,6 +26,17 @@ export const clarityInsightsSchema = z.object({
 	rageClicks: z.number(),
 	deadClicks: z.number(),
 	scriptErrors: z.number(),
+	// % de sessões afetadas — mesmo estilo de exibição da própria UI web do Clarity
+	// ("23,71% — 23 sessões"), não só uma contagem solta sem contexto do tamanho da amostra.
+	rageClickPercent: z.number(),
+	deadClickPercent: z.number(),
+	scriptErrorPercent: z.number(),
+	// "Rolagem excessiva" e "Retornos rápidos" na UI do Clarity — já vinham na mesma resposta
+	// da chamada principal, só não líamos essas duas métricas ainda.
+	excessiveScrollSessions: z.number(),
+	excessiveScrollPercent: z.number(),
+	quickBackSessions: z.number(),
+	quickBackPercent: z.number(),
 	topPages: z.array(z.object({ url: z.string(), sessions: z.number() })),
 	// Detalhamentos (subtipos): em quais páginas cada tipo de clique problemático mais
 	// acontece, e como as sessões se distribuem por dispositivo/navegador.

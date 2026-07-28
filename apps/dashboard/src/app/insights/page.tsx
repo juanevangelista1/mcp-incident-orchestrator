@@ -65,7 +65,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 				<p className="text-muted-foreground text-sm">{emptyMessage}</p>
 			) : (
 				<>
-					<section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+					<section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
 						<Card size="sm" className="border-t-4 border-t-sky-500/70">
 							<CardHeader>
 								<CardDescription>Sessões</CardDescription>
@@ -74,20 +74,37 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 						</Card>
 						<Card size="sm" className="border-t-4 border-t-amber-500/70">
 							<CardHeader>
-								<CardDescription>Rage clicks</CardDescription>
-								<CardTitle className="text-2xl sm:text-3xl">{data.rageClicks}</CardTitle>
+								<CardDescription>Cliques contínuos (rage)</CardDescription>
+								<CardTitle className="text-2xl sm:text-3xl">{data.rageClickPercent}%</CardTitle>
+								<p className="text-muted-foreground text-xs">{data.rageClicks} sessão(ões)</p>
 							</CardHeader>
 						</Card>
 						<Card size="sm" className="border-t-4 border-t-orange-500/70">
 							<CardHeader>
-								<CardDescription>Dead clicks</CardDescription>
-								<CardTitle className="text-2xl sm:text-3xl">{data.deadClicks}</CardTitle>
+								<CardDescription>Cliques mortos (dead)</CardDescription>
+								<CardTitle className="text-2xl sm:text-3xl">{data.deadClickPercent}%</CardTitle>
+								<p className="text-muted-foreground text-xs">{data.deadClicks} sessão(ões)</p>
 							</CardHeader>
 						</Card>
 						<Card size="sm" className="border-t-4 border-t-rose-500/70">
 							<CardHeader>
 								<CardDescription>Erros de script</CardDescription>
-								<CardTitle className="text-2xl sm:text-3xl">{data.scriptErrors}</CardTitle>
+								<CardTitle className="text-2xl sm:text-3xl">{data.scriptErrorPercent}%</CardTitle>
+								<p className="text-muted-foreground text-xs">{data.scriptErrors} sessão(ões)</p>
+							</CardHeader>
+						</Card>
+						<Card size="sm" className="border-t-4 border-t-violet-500/70">
+							<CardHeader>
+								<CardDescription>Rolagem excessiva</CardDescription>
+								<CardTitle className="text-2xl sm:text-3xl">{data.excessiveScrollPercent}%</CardTitle>
+								<p className="text-muted-foreground text-xs">{data.excessiveScrollSessions} sessão(ões)</p>
+							</CardHeader>
+						</Card>
+						<Card size="sm" className="border-t-4 border-t-indigo-500/70">
+							<CardHeader>
+								<CardDescription>Retornos rápidos</CardDescription>
+								<CardTitle className="text-2xl sm:text-3xl">{data.quickBackPercent}%</CardTitle>
+								<p className="text-muted-foreground text-xs">{data.quickBackSessions} sessão(ões)</p>
 							</CardHeader>
 						</Card>
 						<Card

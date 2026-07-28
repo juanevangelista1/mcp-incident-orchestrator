@@ -42,9 +42,11 @@ export function registerFetchClarityInsightsTool(server: McpServer, clarityServi
 					`Insights do Clarity (últimos ${args.numOfDays} dia(s)):\n` +
 					`- Sessões: ${insights.totalSessions}\n` +
 					`- Sessões de baixo engajamento (estimativa, não é dado oficial do Clarity): ${insights.lowEngagementSessions}\n` +
-					`- Rage clicks: ${insights.rageClicks}\n` +
-					`- Dead clicks: ${insights.deadClicks}\n` +
-					`- Erros de script: ${insights.scriptErrors}\n\n` +
+					`- Rage clicks (cliques contínuos): ${insights.rageClicks} (${insights.rageClickPercent}% das sessões)\n` +
+					`- Dead clicks (cliques mortos): ${insights.deadClicks} (${insights.deadClickPercent}% das sessões)\n` +
+					`- Erros de script: ${insights.scriptErrors} (${insights.scriptErrorPercent}% das sessões)\n` +
+					`- Rolagem excessiva: ${insights.excessiveScrollSessions} (${insights.excessiveScrollPercent}% das sessões)\n` +
+					`- Retornos rápidos: ${insights.quickBackSessions} (${insights.quickBackPercent}% das sessões)\n\n` +
 					`Páginas mais visitadas:\n${topPagesReport || 'Nenhuma página encontrada.'}\n\n` +
 					`Rage clicks por página:\n${rageByPageReport || 'Nenhum rage click encontrado.'}\n\n` +
 					`Dead clicks por página:\n${deadByPageReport || 'Nenhum dead click encontrado.'}\n\n` +

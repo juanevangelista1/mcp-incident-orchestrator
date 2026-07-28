@@ -63,6 +63,13 @@ export interface ClarityInsights {
 	rageClicks: number;
 	deadClicks: number;
 	scriptErrors: number;
+	rageClickPercent: number;
+	deadClickPercent: number;
+	scriptErrorPercent: number;
+	excessiveScrollSessions: number;
+	excessiveScrollPercent: number;
+	quickBackSessions: number;
+	quickBackPercent: number;
 	topPages: { url: string; sessions: number }[];
 	rageClicksByPage: { url: string; count: number }[];
 	deadClicksByPage: { url: string; count: number }[];
