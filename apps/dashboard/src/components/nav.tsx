@@ -8,6 +8,7 @@ import { Activity, Menu, X } from 'lucide-react';
 const links = [
 	{ href: '/', label: 'Overview' },
 	{ href: '/issues', label: 'Issues (Sentry)' },
+	{ href: '/issues/comparar', label: 'Comparar rotas' },
 	{ href: '/logs', label: 'Logs (Datadog)' },
 	{ href: '/insights', label: 'Insights (Clarity)' },
 	{ href: '/insights/agendamento', label: 'Funil (agendamento)' },

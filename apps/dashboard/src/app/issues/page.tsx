@@ -202,9 +202,19 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 				<section className="grid gap-6 md:grid-cols-2">
 					<Card>
 						<CardContent className="flex flex-col gap-3 pt-6">
-							<div>
-								<h2 className="text-sm font-medium">Ranking por página — Sentry</h2>
-								<p className="text-muted-foreground text-xs">Ocorrências agrupadas por rota/culprit do erro</p>
+							<div className="flex items-center justify-between gap-2">
+								<div>
+									<h2 className="text-sm font-medium">Ranking por página — Sentry</h2>
+									<p className="text-muted-foreground text-xs">Ocorrências agrupadas por rota/culprit do erro</p>
+								</div>
+								{sentryPageRank.length >= 2 && (
+									<Link
+										href={`/issues/comparar?routeA=${encodeURIComponent(sentryPageRank[0].page)}&routeB=${encodeURIComponent(sentryPageRank[1].page)}`}
+										className="text-muted-foreground shrink-0 text-xs hover:underline"
+									>
+										Comparar top 2 →
+									</Link>
+								)}
 							</div>
 							{sentryPageRank.length > 0 ? (
 								<div className="flex flex-col gap-1">
