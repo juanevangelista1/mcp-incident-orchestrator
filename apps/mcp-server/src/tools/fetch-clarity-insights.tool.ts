@@ -28,6 +28,9 @@ export function registerFetchClarityInsightsTool(server: McpServer, clarityServi
 				const deadByPageReport = insights.deadClicksByPage
 					.map((p, i) => `${i + 1}. ${p.url} — ${p.count} dead click(s)`)
 					.join('\n');
+				const scriptByPageReport = insights.scriptErrorsByPage
+					.map((p, i) => `${i + 1}. ${p.url} — ${p.count} erro(s) de script`)
+					.join('\n');
 				const deviceReport = insights.sessionsByDevice
 					.map((d) => `${d.device}: ${d.count} sessão(ões)`)
 					.join(', ');
@@ -38,12 +41,14 @@ export function registerFetchClarityInsightsTool(server: McpServer, clarityServi
 				const report =
 					`Insights do Clarity (últimos ${args.numOfDays} dia(s)):\n` +
 					`- Sessões: ${insights.totalSessions}\n` +
+					`- Sessões de baixo engajamento (estimativa, não é dado oficial do Clarity): ${insights.lowEngagementSessions}\n` +
 					`- Rage clicks: ${insights.rageClicks}\n` +
 					`- Dead clicks: ${insights.deadClicks}\n` +
 					`- Erros de script: ${insights.scriptErrors}\n\n` +
 					`Páginas mais visitadas:\n${topPagesReport || 'Nenhuma página encontrada.'}\n\n` +
 					`Rage clicks por página:\n${rageByPageReport || 'Nenhum rage click encontrado.'}\n\n` +
 					`Dead clicks por página:\n${deadByPageReport || 'Nenhum dead click encontrado.'}\n\n` +
+					`Erros de script por página:\n${scriptByPageReport || 'Nenhum erro de script encontrado.'}\n\n` +
 					`Sessões por dispositivo: ${deviceReport || 'sem dados'}\n` +
 					`Sessões por navegador: ${browserReport || 'sem dados'}`;
 

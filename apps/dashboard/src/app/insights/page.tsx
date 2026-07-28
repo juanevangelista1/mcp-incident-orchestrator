@@ -45,7 +45,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 				<p className="text-muted-foreground text-sm">{emptyMessage}</p>
 			) : (
 				<>
-					<section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+					<section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
 						<Card size="sm" className="border-t-4 border-t-sky-500/70">
 							<CardHeader>
 								<CardDescription>Sessões</CardDescription>
@@ -68,6 +68,16 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 							<CardHeader>
 								<CardDescription>Erros de script</CardDescription>
 								<CardTitle className="text-2xl sm:text-3xl">{data.scriptErrors}</CardTitle>
+							</CardHeader>
+						</Card>
+						<Card
+							size="sm"
+							className="border-t-4 border-t-slate-500/70"
+							title="Estimativa nossa (sessões com tempo ativo zerado), não é um dado oficial de detecção de bot do Clarity — a API pública dele não expõe isso."
+						>
+							<CardHeader>
+								<CardDescription>Baixo engajamento (estimativa)</CardDescription>
+								<CardTitle className="text-2xl sm:text-3xl">{data.lowEngagementSessions}</CardTitle>
 							</CardHeader>
 						</Card>
 					</section>
@@ -96,7 +106,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 						</CardContent>
 					</Card>
 
-					<section className="grid gap-6 md:grid-cols-2">
+					<section className="grid gap-6 md:grid-cols-3">
 						<Card className="border-t-4 border-t-amber-500/70">
 							<CardHeader>
 								<CardTitle>Rage clicks por página</CardTitle>
@@ -143,6 +153,31 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 									</div>
 								) : (
 									<p className="text-muted-foreground text-sm">Nenhum dead click encontrado.</p>
+								)}
+							</CardContent>
+						</Card>
+
+						<Card className="border-t-4 border-t-rose-500/70">
+							<CardHeader>
+								<CardTitle>Erros de script por página</CardTitle>
+								<CardDescription>Onde o Clarity registrou mais erros de JavaScript</CardDescription>
+							</CardHeader>
+							<CardContent>
+								{data.scriptErrorsByPage.length > 0 ? (
+									<div className="flex flex-col gap-1">
+										{data.scriptErrorsByPage.map((p, i) => (
+											<a key={`${p.url}-${i}`} href={`/insights?url=${encodeURIComponent(p.url)}`} className="block rounded-md hover:bg-accent/60">
+												<MetricBar
+													label={p.url}
+													value={p.count}
+													max={data.scriptErrorsByPage[0].count}
+													barColor="bg-rose-500/15"
+												/>
+											</a>
+										))}
+									</div>
+								) : (
+									<p className="text-muted-foreground text-sm">Nenhum erro de script encontrado.</p>
 								)}
 							</CardContent>
 						</Card>

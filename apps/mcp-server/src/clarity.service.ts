@@ -17,6 +17,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 // `Browser` (exatamente com essa capitalização) referentes ao recorte daquela linha.
 const METRIC_NAMES = {
 	traffic: 'Traffic',
+	engagement: 'EngagementTime',
 	rageClicks: 'RageClickCount',
 	deadClicks: 'DeadClickCount',
 	scriptErrors: 'ScriptErrorCount',
@@ -99,6 +100,37 @@ export class ClarityService {
 			.map(([key, count]) => ({ key, count }));
 	}
 
+	// Chave composta Url+Device+Browser — permite cruzar linhas de métricas diferentes que
+	// descrevem o mesmo recorte (ex: quantas sessões do Traffic tiveram activeTime zerado
+	// no EngagementTime), já que a API não dá um ID de linha compartilhado entre métricas.
+	private compositeKey(row: Record<string, any>): string {
+		return ['Url', 'Device', 'Browser'].map((field) => String(this.field(row, field) ?? '')).join('|');
+	}
+
+	// Proxy de "tráfego não qualificado/possível bot": a API do Clarity não expõe um sinal de
+	// bot de verdade (confirmado testando a API ao vivo — não existe essa métrica), então
+	// aproximamos como sessões cujo recorte (Url+Device+Browser) teve activeTime = 0 no
+	// EngagementTime. É uma estimativa por recorte, não uma contagem por sessão individual —
+	// deixado claro também na UI que consome este campo.
+	private lowEngagementSessions(
+		trafficRows: Record<string, any>[],
+		engagementRows: Record<string, any>[],
+	): number {
+		const zeroActiveKeys = new Set<string>();
+		for (const row of engagementRows) {
+			if ((Number(this.field(row, 'activeTime')) || 0) === 0) {
+				zeroActiveKeys.add(this.compositeKey(row));
+			}
+		}
+		let total = 0;
+		for (const row of trafficRows) {
+			if (zeroActiveKeys.has(this.compositeKey(row))) {
+				total += Number(this.field(row, 'totalSessionCount')) || 0;
+			}
+		}
+		return total;
+	}
+
 	public async fetchInsights(params: FetchInsightsParams): Promise<ClarityInsights> {
 		const cacheKey = JSON.stringify(params);
 		const cached = this.cache.get(cacheKey);
@@ -128,6 +160,7 @@ export class ClarityService {
 		const metrics = Array.isArray(data) ? data : [];
 
 		let trafficRows = this.rowsFor(metrics, METRIC_NAMES.traffic);
+		let engagementRows = this.rowsFor(metrics, METRIC_NAMES.engagement);
 		let rageRows = this.rowsFor(metrics, METRIC_NAMES.rageClicks);
 		let deadRows = this.rowsFor(metrics, METRIC_NAMES.deadClicks);
 		let scriptRows = this.rowsFor(metrics, METRIC_NAMES.scriptErrors);
@@ -139,6 +172,7 @@ export class ClarityService {
 			const matchesUrl = (row: Record<string, any>) =>
 				String(this.field(row, 'Url') ?? '').toLowerCase().includes(needle);
 			trafficRows = trafficRows.filter(matchesUrl);
+			engagementRows = engagementRows.filter(matchesUrl);
 			rageRows = rageRows.filter(matchesUrl);
 			deadRows = deadRows.filter(matchesUrl);
 			scriptRows = scriptRows.filter(matchesUrl);
@@ -164,6 +198,11 @@ export class ClarityService {
 			browser: r.key,
 			count: r.count,
 		}));
+		const scriptErrorsByPage = this.groupSum(scriptRows, 'Url', 'sessionsCount', 5).map((r) => ({
+			url: r.key,
+			count: r.count,
+		}));
+		const lowEngagementSessions = this.lowEngagementSessions(trafficRows, engagementRows);
 
 		const result = clarityInsightsSchema.parse({
 			totalSessions: this.sum(trafficRows, 'totalSessionCount'),
@@ -173,8 +212,10 @@ export class ClarityService {
 			topPages,
 			rageClicksByPage,
 			deadClicksByPage,
+			scriptErrorsByPage,
 			sessionsByDevice,
 			sessionsByBrowser,
+			lowEngagementSessions,
 		});
 
 		this.cache.set(cacheKey, result);
