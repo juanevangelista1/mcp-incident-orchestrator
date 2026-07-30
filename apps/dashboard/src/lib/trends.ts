@@ -14,6 +14,10 @@ export interface DailyPoint {
 	// Sessões que chegaram na URL de agendamento (proxy de intenção, não confirmação de
 	// conversão) — só existe a partir do dia em que CLARITY_BOOKING_URL_PATTERN foi configurado.
 	bookingArrivals: number | null;
+	// GA4: conversão REAL de um evento específico (ver GA4_CONVERSION_EVENT_NAME no
+	// mcp-server) — diferente de bookingArrivals, que é só um proxy de intenção do Clarity.
+	ga4Sessions: number | null;
+	ga4Conversions: number | null;
 }
 
 export function toDailyPoints(reports: DailyReport[]): DailyPoint[] {
@@ -34,6 +38,8 @@ export function toDailyPoints(reports: DailyReport[]): DailyPoint[] {
 				clarityDeadClicks: raw?.clarity?.deadClicks ?? null,
 				clarityScriptErrors: raw?.clarity?.scriptErrors ?? null,
 				bookingArrivals: raw?.clarityBooking?.totalSessions ?? null,
+				ga4Sessions: raw?.ga4?.sessions ?? null,
+				ga4Conversions: raw?.ga4?.conversions ?? null,
 			};
 		})
 		.sort((a, b) => a.date.localeCompare(b.date));
@@ -68,6 +74,8 @@ export interface RollupRow {
 	// semanal/mensal não respondiam "quantos leads/agendamentos" nem "taxa de conversão",
 	// só o diário respondia.
 	bookingArrivals: number;
+	ga4Sessions: number;
+	ga4Conversions: number;
 }
 
 function rollup(points: DailyPoint[], keyFn: (p: DailyPoint) => string): RollupRow[] {
@@ -76,11 +84,21 @@ function rollup(points: DailyPoint[], keyFn: (p: DailyPoint) => string): RollupR
 		const key = keyFn(p);
 		const row =
 			map.get(key) ??
-			({ key, sentryOccurrences: 0, claritySessions: 0, clarityScriptErrors: 0, bookingArrivals: 0 } as RollupRow);
+			({
+				key,
+				sentryOccurrences: 0,
+				claritySessions: 0,
+				clarityScriptErrors: 0,
+				bookingArrivals: 0,
+				ga4Sessions: 0,
+				ga4Conversions: 0,
+			} as RollupRow);
 		row.sentryOccurrences += p.sentryOccurrences ?? 0;
 		row.claritySessions += p.claritySessions ?? 0;
 		row.clarityScriptErrors += p.clarityScriptErrors ?? 0;
 		row.bookingArrivals += p.bookingArrivals ?? 0;
+		row.ga4Sessions += p.ga4Sessions ?? 0;
+		row.ga4Conversions += p.ga4Conversions ?? 0;
 		map.set(key, row);
 	}
 	return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));

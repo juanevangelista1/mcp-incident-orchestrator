@@ -5,7 +5,7 @@ import type { ReportDocument } from './types';
 export async function downloadAsExcel(doc: ReportDocument, filenameBase: string): Promise<void> {
 	const ExcelJS = (await import('exceljs')).default;
 	const workbook = new ExcelJS.Workbook();
-	workbook.creator = 'Incident Orchestrator';
+	workbook.creator = 'Orquestrador de Incidentes';
 	workbook.created = doc.generatedAt;
 
 	const summarySheet = workbook.addWorksheet('Resumo');
@@ -33,7 +33,11 @@ export async function downloadAsExcel(doc: ReportDocument, filenameBase: string)
 	for (const section of doc.sections) {
 		if (section.kind !== 'table') continue;
 		const sheet = workbook.addWorksheet(section.heading.slice(0, 31) || 'Dados');
-		sheet.columns = section.headers.map((h) => ({ header: h, key: h, width: Math.max(14, h.length + 2) }));
+		sheet.columns = section.headers.map((h) => ({
+			header: h,
+			key: h,
+			width: Math.max(14, h.length + 2),
+		}));
 		sheet.getRow(1).font = { bold: true };
 		for (const row of section.rows) {
 			sheet.addRow(row);

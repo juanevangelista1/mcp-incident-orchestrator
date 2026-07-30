@@ -23,63 +23,66 @@ export default async function OverviewPage() {
 	const clarity = clarityResult.status === 'fulfilled' ? clarityResult.value : null;
 
 	return (
-		<main id="main-content" className="mx-auto flex max-w-6xl flex-col gap-6 p-4 sm:gap-8 sm:p-8">
+		<main
+			id='main-content'
+			className='mx-auto flex max-w-6xl flex-col gap-6 p-4 sm:gap-8 sm:p-8'>
 			<header>
-				<h1 className="text-xl font-semibold sm:text-2xl">Incident Orchestrator — Overview</h1>
-				<p className="text-muted-foreground text-sm">
+				<h1 className='text-xl font-semibold sm:text-2xl'>Orquestrador de Incidentes - Overview</h1>
+				<p className='text-muted-foreground text-sm'>
 					Sentry, Datadog e Clarity via MCP · projeto{' '}
-					<Badge variant="outline">{PROJECT_SLUG || 'não configurado'}</Badge>
+					<Badge variant='outline'>{PROJECT_SLUG || 'não configurado'}</Badge>
 				</p>
 			</header>
 
-			<section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+			<section className='grid grid-cols-2 gap-4 md:grid-cols-4'>
 				<KpiCard
-					href="/issues"
-					label="Erros não resolvidos"
+					href='/issues'
+					label='Erros não resolvidos'
 					value={sentry?.totalIssues}
 					icon={AlertTriangle}
-					accent="text-rose-600 bg-rose-600/10 dark:text-rose-400"
-					borderColor="border-t-rose-500/70"
+					accent='text-rose-600 bg-rose-600/10 dark:text-rose-400'
+					borderColor='border-t-rose-500/70'
 				/>
 				<KpiCard
-					href="/issues"
-					label="Ocorrências (Sentry)"
+					href='/issues'
+					label='Ocorrências (Sentry)'
 					value={sentry?.totalOccurrences}
 					icon={AlertTriangle}
-					accent="text-rose-600 bg-rose-600/10 dark:text-rose-400"
-					borderColor="border-t-rose-500/70"
+					accent='text-rose-600 bg-rose-600/10 dark:text-rose-400'
+					borderColor='border-t-rose-500/70'
 				/>
 				<KpiCard
-					href="/logs"
-					label="Logs (Datadog)"
+					href='/logs'
+					label='Logs (Datadog)'
 					value={datadog?.totalLogs}
 					unavailable={!datadog}
 					icon={Activity}
-					accent="text-violet-600 bg-violet-600/10 dark:text-violet-400"
-					borderColor="border-t-violet-500/70"
+					accent='text-violet-600 bg-violet-600/10 dark:text-violet-400'
+					borderColor='border-t-violet-500/70'
 				/>
 				<KpiCard
-					href="/insights"
-					label="Sessões (Clarity)"
+					href='/insights'
+					label='Sessões (Clarity)'
 					value={clarity?.totalSessions}
 					unavailable={!clarity}
 					icon={Users}
-					accent="text-sky-600 bg-sky-600/10 dark:text-sky-400"
-					borderColor="border-t-sky-500/70"
+					accent='text-sky-600 bg-sky-600/10 dark:text-sky-400'
+					borderColor='border-t-sky-500/70'
 				/>
 			</section>
 
-			<section className="grid gap-6 lg:grid-cols-3">
-				<Card className="border-t-4 border-t-rose-500/70">
+			<section className='grid gap-6 lg:grid-cols-3'>
+				<Card className='border-t-4 border-t-rose-500/70'>
 					<CardHeader>
-						<div className="flex items-center gap-2">
+						<div className='flex items-center gap-2'>
 							<span
-								aria-hidden="true"
-								className="flex size-7 items-center justify-center rounded-md bg-rose-600/10 text-rose-600 dark:text-rose-400"
-							>
-								<AlertTriangle className="size-4" />
+								aria-hidden='true'
+								className='flex size-7 items-center justify-center rounded-md bg-rose-600/10 text-rose-600 dark:text-rose-400'>
+								<AlertTriangle className='size-4' />
 							</span>
-							<Link href="/issues" className="hover:underline">
+							<Link
+								href='/issues'
+								className='hover:underline'>
 								<CardTitle>Erros mais frequentes (Sentry)</CardTitle>
 							</Link>
 						</div>
@@ -87,38 +90,38 @@ export default async function OverviewPage() {
 					</CardHeader>
 					<CardContent>
 						{sentry && sentry.topCulprits.length > 0 ? (
-							<div className="flex flex-col gap-1">
+							<div className='flex flex-col gap-1'>
 								{sentry.topCulprits.map((c) => (
 									<Link
 										key={c.culprit}
 										href={`/issues?search=${encodeURIComponent(c.culprit)}`}
-										className="block rounded-md hover:bg-accent/60"
-									>
+										className='block rounded-md hover:bg-accent/60'>
 										<MetricBar
 											label={c.culprit}
 											value={c.count}
 											max={sentry.topCulprits[0].count}
-											barColor="bg-rose-500/15"
+											barColor='bg-rose-500/15'
 										/>
 									</Link>
 								))}
 							</div>
 						) : (
-							<EmptyState label="Nenhum erro encontrado ou Sentry indisponível." />
+							<EmptyState label='Nenhum erro encontrado ou Sentry indisponível.' />
 						)}
 					</CardContent>
 				</Card>
 
-				<Card className="border-t-4 border-t-sky-500/70">
+				<Card className='border-t-4 border-t-sky-500/70'>
 					<CardHeader>
-						<div className="flex items-center gap-2">
+						<div className='flex items-center gap-2'>
 							<span
-								aria-hidden="true"
-								className="flex size-7 items-center justify-center rounded-md bg-sky-600/10 text-sky-600 dark:text-sky-400"
-							>
-								<MousePointerClick className="size-4" />
+								aria-hidden='true'
+								className='flex size-7 items-center justify-center rounded-md bg-sky-600/10 text-sky-600 dark:text-sky-400'>
+								<MousePointerClick className='size-4' />
 							</span>
-							<Link href="/insights" className="hover:underline">
+							<Link
+								href='/insights'
+								className='hover:underline'>
 								<CardTitle>Comportamento do usuário (Clarity)</CardTitle>
 							</Link>
 						</div>
@@ -126,45 +129,45 @@ export default async function OverviewPage() {
 					</CardHeader>
 					<CardContent>
 						{clarity ? (
-							<div className="flex flex-col gap-4 text-sm">
-								<div className="flex flex-wrap gap-2">
-									<Badge variant="outline">Rage clicks: {clarity.rageClicks}</Badge>
-									<Badge variant="outline">Dead clicks: {clarity.deadClicks}</Badge>
-									<Badge variant="outline">Erros de script: {clarity.scriptErrors}</Badge>
+							<div className='flex flex-col gap-4 text-sm'>
+								<div className='flex flex-wrap gap-2'>
+									<Badge variant='outline'>Rage clicks: {clarity.rageClicks}</Badge>
+									<Badge variant='outline'>Dead clicks: {clarity.deadClicks}</Badge>
+									<Badge variant='outline'>Erros de script: {clarity.scriptErrors}</Badge>
 								</div>
-								<div className="flex flex-col gap-1">
+								<div className='flex flex-col gap-1'>
 									{clarity.topPages.map((p, i) => (
 										<Link
 											key={`${p.url}-${i}`}
 											href={`/insights?url=${encodeURIComponent(p.url)}`}
-											className="block rounded-md hover:bg-accent/60"
-										>
+											className='block rounded-md hover:bg-accent/60'>
 											<MetricBar
 												label={p.url}
 												value={p.sessions}
 												max={clarity.topPages[0].sessions}
-												barColor="bg-sky-500/15"
+												barColor='bg-sky-500/15'
 											/>
 										</Link>
 									))}
 								</div>
 							</div>
 						) : (
-							<EmptyState label="Clarity não configurado no MCP server." />
+							<EmptyState label='Clarity não configurado no MCP server.' />
 						)}
 					</CardContent>
 				</Card>
 
-				<Card className="border-t-4 border-t-violet-500/70">
+				<Card className='border-t-4 border-t-violet-500/70'>
 					<CardHeader>
-						<div className="flex items-center gap-2">
+						<div className='flex items-center gap-2'>
 							<span
-								aria-hidden="true"
-								className="flex size-7 items-center justify-center rounded-md bg-violet-600/10 text-violet-600 dark:text-violet-400"
-							>
-								<Activity className="size-4" />
+								aria-hidden='true'
+								className='flex size-7 items-center justify-center rounded-md bg-violet-600/10 text-violet-600 dark:text-violet-400'>
+								<Activity className='size-4' />
 							</span>
-							<Link href="/logs" className="hover:underline">
+							<Link
+								href='/logs'
+								className='hover:underline'>
 								<CardTitle>Logs por serviço (Datadog)</CardTitle>
 							</Link>
 						</div>
@@ -172,24 +175,23 @@ export default async function OverviewPage() {
 					</CardHeader>
 					<CardContent>
 						{datadog && datadog.byService.length > 0 ? (
-							<div className="flex flex-col gap-1">
+							<div className='flex flex-col gap-1'>
 								{datadog.byService.slice(0, 5).map((s) => (
 									<Link
 										key={s.service}
 										href={`/logs?service=${encodeURIComponent(s.service)}`}
-										className="block rounded-md hover:bg-accent/60"
-									>
+										className='block rounded-md hover:bg-accent/60'>
 										<MetricBar
 											label={s.service}
 											value={s.count}
 											max={datadog.byService[0].count}
-											barColor="bg-violet-500/15"
+											barColor='bg-violet-500/15'
 										/>
 									</Link>
 								))}
 							</div>
 						) : (
-							<EmptyState label="Nenhum log encontrado ou Datadog indisponível." />
+							<EmptyState label='Nenhum log encontrado ou Datadog indisponível.' />
 						)}
 					</CardContent>
 				</Card>
@@ -216,17 +218,27 @@ function KpiCard({
 	borderColor: string;
 }) {
 	return (
-		<Link href={href} className="block">
-			<Card size="sm" className={`border-t-4 transition-colors hover:bg-accent/40 ${borderColor}`}>
+		<Link
+			href={href}
+			className='block'>
+			<Card
+				size='sm'
+				className={`border-t-4 transition-colors hover:bg-accent/40 ${borderColor}`}>
 				<CardHeader>
-					<div className="flex items-center justify-between">
+					<div className='flex items-center justify-between'>
 						<CardDescription>{label}</CardDescription>
-						<span aria-hidden="true" className={`flex size-7 items-center justify-center rounded-md ${accent}`}>
-							<Icon className="size-4" />
+						<span
+							aria-hidden='true'
+							className={`flex size-7 items-center justify-center rounded-md ${accent}`}>
+							<Icon className='size-4' />
 						</span>
 					</div>
-					<CardTitle className="text-2xl sm:text-3xl">
-						{unavailable ? <span className="text-muted-foreground text-sm sm:text-base">indisponível</span> : (value ?? '—')}
+					<CardTitle className='text-2xl sm:text-3xl'>
+						{unavailable ? (
+							<span className='text-muted-foreground text-sm sm:text-base'>indisponível</span>
+						) : (
+							(value ?? '—')
+						)}
 					</CardTitle>
 				</CardHeader>
 			</Card>
@@ -235,5 +247,5 @@ function KpiCard({
 }
 
 function EmptyState({ label }: { label: string }) {
-	return <p className="text-muted-foreground text-sm">{label}</p>;
+	return <p className='text-muted-foreground text-sm'>{label}</p>;
 }

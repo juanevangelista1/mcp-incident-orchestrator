@@ -3,6 +3,7 @@ import { SentryService } from './sentry.service.js';
 import { DatadogService } from './datadog.service.js';
 import { ClarityService } from './clarity.service.js';
 import { AwsCloudWatchService } from './aws-cloudwatch.service.js';
+import { Ga4Service } from './ga4.service.js';
 import { registerCaptureErrorsTool } from './tools/capture-errors.tool.js';
 import { registerCountErrorsTool } from './tools/count-errors.tool.js';
 import { registerSummarizeErrorsTool } from './tools/summarize-errors.tool.js';
@@ -17,12 +18,14 @@ import { registerFetchAwsLogsTool } from './tools/fetch-aws-logs.tool.js';
 import { registerCountAwsLogsTool } from './tools/count-aws-logs.tool.js';
 import { registerSummarizeAwsLogsTool } from './tools/summarize-aws-logs.tool.js';
 import { registerAwsLogDetailsTool } from './tools/aws-log-details.tool.js';
+import { registerFetchGa4SummaryTool } from './tools/fetch-ga4-summary.tool.js';
 
 export interface OrchestratorServices {
 	sentry: SentryService;
 	datadog?: DatadogService;
 	clarity?: ClarityService;
 	aws?: AwsCloudWatchService;
+	ga4?: Ga4Service;
 }
 
 // Os services guardam os caches (rate-limit protection) e devem viver por todo o processo,
@@ -52,7 +55,14 @@ export function createServices(): OrchestratorServices {
 		console.error(`[AWS] Plugin opcional não configurado (${error.message}) — tools do CloudWatch ficam de fora.`);
 	}
 
-	return { sentry, datadog, clarity, aws };
+	let ga4: Ga4Service | undefined;
+	try {
+		ga4 = new Ga4Service();
+	} catch (error: any) {
+		console.error(`[GA4] Plugin opcional não configurado (${error.message}) — tool do GA4 fica de fora.`);
+	}
+
+	return { sentry, datadog, clarity, aws, ga4 };
 }
 
 // Monta um McpServer novo plugando as tools sobre os services recebidos.
@@ -85,6 +95,10 @@ export function buildMcpServer(services: OrchestratorServices): McpServer {
 		registerCountAwsLogsTool(server, services.aws);
 		registerSummarizeAwsLogsTool(server, services.aws);
 		registerAwsLogDetailsTool(server, services.aws);
+	}
+
+	if (services.ga4) {
+		registerFetchGa4SummaryTool(server, services.ga4);
 	}
 
 	return server;

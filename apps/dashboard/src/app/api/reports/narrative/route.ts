@@ -50,8 +50,14 @@ export async function POST() {
 			sessoes: percentChange(lastDay.claritySessions, prevDay?.claritySessions ?? null),
 			erros: percentChange(lastDay.sentryOccurrences, prevDay?.sentryOccurrences ?? null),
 			agendamento: percentChange(lastDay.bookingArrivals, prevDay?.bookingArrivals ?? null),
+			conversoesGa4: percentChange(lastDay.ga4Conversions, prevDay?.ga4Conversions ?? null),
 		},
-		baseline: { sessoes: sessionsBaseline, erros: occurrencesBaseline, agendamento: bookingBaseline },
+		baseline: {
+			sessoes: sessionsBaseline,
+			erros: occurrencesBaseline,
+			agendamento: bookingBaseline,
+			conversoesGa4: baseline(points, 'ga4Conversions'),
+		},
 		diasDeHistorico: points.length,
 	};
 
@@ -59,7 +65,9 @@ export async function POST() {
 investigando a saúde da aplicação e do negócio no nível do PERÍODO (dia mais recente vs.
 anterior), não de um erro específico. Dados: Sentry = erros de aplicação, Clarity =
 comportamento/sessões, "agendamento" = proxy de intenção de conversão — sessões que chegaram
-na página de agendamento, NÃO confirmação de conversão concluída.
+na página de agendamento, NÃO confirmação de conversão concluída. "conversoesGa4" (quando
+disponível) É o evento de conversão real do Google Analytics 4 — diferente do proxy do
+Clarity, esse número já é a confirmação de conversão em si.
 
 Escreva em português, em markdown, seguindo EXATAMENTE esta estrutura, uma seção para cada
 etapa:

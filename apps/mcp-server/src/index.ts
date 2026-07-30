@@ -8,7 +8,7 @@ async function run() {
 
 	const transport = new StdioServerTransport();
 	await server.connect(transport);
-	console.error('Servidor MCP Incident Orchestrator rodando. Aguardando conexões via stdio...');
+	console.error('Servidor MCP Orquestrador de Incidentes rodando. Aguardando conexões via stdio...');
 }
 
 run().catch(console.error);

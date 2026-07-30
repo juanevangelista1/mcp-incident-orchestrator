@@ -6,6 +6,7 @@ import {
 	getClarityRegionInsights,
 	getClarityBookingInsights,
 	getAwsSummary,
+	getGa4Summary,
 } from '@/lib/mcp-summaries';
 import { generateWithFallback } from '@/lib/gemini';
 import { insertDailyReport } from '@/db/client';
@@ -17,6 +18,7 @@ function buildFallbackSummary(data: {
 	datadog: Awaited<ReturnType<typeof getDatadogSummary>>;
 	clarity: Awaited<ReturnType<typeof getClarityInsights>>;
 	aws: Awaited<ReturnType<typeof getAwsSummary>>;
+	ga4: Awaited<ReturnType<typeof getGa4Summary>>;
 }): string {
 	const parts: string[] = [];
 	if (data.sentry) {
@@ -30,6 +32,12 @@ function buildFallbackSummary(data: {
 	}
 	if (data.clarity) {
 		parts.push(`${data.clarity.totalSessions} sessão(ões) no Clarity (${data.clarity.rageClicks} rage clicks)`);
+	}
+	if (data.ga4) {
+		parts.push(
+			`${data.ga4.sessions} sessão(ões) no GA4` +
+				(data.ga4.conversions !== null ? ` (${data.ga4.conversions} conversões reais)` : ''),
+		);
 	}
 	return parts.length > 0 ? parts.join('; ') + '.' : 'Nenhuma fonte disponível para este digest.';
 }
@@ -53,7 +61,7 @@ export async function GET(req: NextRequest) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	const [sentry, datadog, clarity, clarityRegion, clarityBooking, aws] = await Promise.all([
+	const [sentry, datadog, clarity, clarityRegion, clarityBooking, aws, ga4] = await Promise.all([
 		getSentrySummary(),
 		getDatadogSummary(),
 		getClarityInsights(),
@@ -63,10 +71,11 @@ export async function GET(req: NextRequest) {
 		// Idem: chamada extra filtrada pela URL de agendamento, só pro digest, só se configurada.
 		getClarityBookingInsights(),
 		getAwsSummary(),
+		getGa4Summary(),
 	]);
 
-	const raw = { sentry, datadog, clarity, clarityRegion, clarityBooking, aws };
-	const fallback = buildFallbackSummary({ sentry, datadog, clarity, aws });
+	const raw = { sentry, datadog, clarity, clarityRegion, clarityBooking, aws, ga4 };
+	const fallback = buildFallbackSummary({ sentry, datadog, clarity, aws, ga4 });
 	const summary = await buildSummary(fallback, raw);
 
 	const now = new Date();

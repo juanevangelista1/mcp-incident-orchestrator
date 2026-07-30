@@ -34,6 +34,7 @@ export default async function ReportsPage() {
 	const sessionsBaseline = baseline(points, 'claritySessions');
 	const occurrencesBaseline = baseline(points, 'sentryOccurrences');
 	const bookingBaseline = baseline(points, 'bookingArrivals');
+	const ga4ConversionsBaseline = baseline(points, 'ga4Conversions');
 
 	const lastDay = points.at(-1);
 	const prevDay = points.at(-2);
@@ -50,6 +51,7 @@ export default async function ReportsPage() {
 	const lastDayRate = lastDay ? conversionRate(lastDay) : null;
 	const prevDayRate = prevDay ? conversionRate(prevDay) : null;
 	const daysWithBookingData = last14.filter((p) => p.bookingArrivals !== null).length;
+	const daysWithGa4Data = last14.filter((p) => p.ga4Conversions !== null).length;
 
 	return (
 		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
@@ -79,6 +81,7 @@ export default async function ReportsPage() {
 							sessionsBaseline={sessionsBaseline}
 							occurrencesBaseline={occurrencesBaseline}
 							bookingBaseline={bookingBaseline}
+							ga4ConversionsBaseline={ga4ConversionsBaseline}
 							scenario={scenario}
 						/>
 					</div>
@@ -190,6 +193,34 @@ export default async function ReportsPage() {
 						</CardContent>
 					</Card>
 
+					<Card className="border-t-4 border-t-teal-500/70">
+						<CardHeader>
+							<div className="flex items-center justify-between gap-2">
+								<CardTitle>Conversões reais (GA4) por dia</CardTitle>
+								<ChangeBadge percent={percentChange(lastDay?.ga4Conversions ?? null, prevDay?.ga4Conversions ?? null)} />
+							</div>
+							<CardDescription>
+								Contagem do evento de conversão configurado no GA4 (não é proxy) —{' '}
+								{daysWithGa4Data} dia(s) com dado no período.
+							</CardDescription>
+						</CardHeader>
+						<CardContent>
+							{daysWithGa4Data > 0 ? (
+								<DailyTrendChart
+									points={last14.map((p) => ({ label: p.date.slice(5), value: p.ga4Conversions ?? 0 }))}
+									valueLabel="conversão(ões)"
+									color="#14b8a6"
+								/>
+							) : (
+								<p className="text-muted-foreground text-sm">
+									Ainda não há dias com o plugin GA4 configurado (<code>GA4_PROPERTY_ID</code>/
+									<code>GA4_CLIENT_EMAIL</code>/<code>GA4_PRIVATE_KEY</code>/
+									<code>GA4_CONVERSION_EVENT_NAME</code>) no período.
+								</p>
+							)}
+						</CardContent>
+					</Card>
+
 					<section className="grid gap-6 md:grid-cols-2">
 						<Card>
 							<CardHeader>
@@ -207,9 +238,15 @@ export default async function ReportsPage() {
 										</div>
 										<div className="flex items-center gap-3">
 											<span>
-												{prevWeek!.bookingArrivals} → {lastWeek!.bookingArrivals} agendamentos
+												{prevWeek!.bookingArrivals} → {lastWeek!.bookingArrivals} agendamentos (proxy)
 											</span>
 											<ChangeBadge percent={percentChange(lastWeek!.bookingArrivals, prevWeek!.bookingArrivals)} />
+										</div>
+										<div className="flex items-center gap-3">
+											<span>
+												{prevWeek!.ga4Conversions} → {lastWeek!.ga4Conversions} conversões (GA4, real)
+											</span>
+											<ChangeBadge percent={percentChange(lastWeek!.ga4Conversions, prevWeek!.ga4Conversions)} />
 										</div>
 									</div>
 								) : (
@@ -236,9 +273,15 @@ export default async function ReportsPage() {
 										</div>
 										<div className="flex items-center gap-3">
 											<span>
-												{prevMonth!.bookingArrivals} → {lastMonth!.bookingArrivals} agendamentos
+												{prevMonth!.bookingArrivals} → {lastMonth!.bookingArrivals} agendamentos (proxy)
 											</span>
 											<ChangeBadge percent={percentChange(lastMonth!.bookingArrivals, prevMonth!.bookingArrivals)} />
+										</div>
+										<div className="flex items-center gap-3">
+											<span>
+												{prevMonth!.ga4Conversions} → {lastMonth!.ga4Conversions} conversões (GA4, real)
+											</span>
+											<ChangeBadge percent={percentChange(lastMonth!.ga4Conversions, prevMonth!.ga4Conversions)} />
 										</div>
 									</div>
 								) : (
@@ -285,6 +328,17 @@ export default async function ReportsPage() {
 										<p>
 											média {bookingBaseline.avg.toFixed(0)} · maior {bookingBaseline.max} · menor{' '}
 											{bookingBaseline.min}
+										</p>
+									) : (
+										<p className="text-muted-foreground">sem dado suficiente</p>
+									)}
+								</div>
+								<div>
+									<p className="text-muted-foreground mb-1 text-xs">Conversões (GA4, real)</p>
+									{ga4ConversionsBaseline ? (
+										<p>
+											média {ga4ConversionsBaseline.avg.toFixed(0)} · maior {ga4ConversionsBaseline.max} · menor{' '}
+											{ga4ConversionsBaseline.min}
 										</p>
 									) : (
 										<p className="text-muted-foreground">sem dado suficiente</p>

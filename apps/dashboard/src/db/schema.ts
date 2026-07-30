@@ -14,6 +14,12 @@ CREATE TABLE IF NOT EXISTS daily_reports (
 	created_at TEXT NOT NULL
 )`;
 
+// Uma linha por DIA, não por execução — sem isso, rodar o cron mais de uma vez no mesmo dia
+// (manual, teste, ou disparo duplicado) cria pontos repetidos no gráfico de tendência e gasta
+// cota do Clarity à toa a cada chamada extra.
+export const CREATE_DAILY_REPORTS_DATE_INDEX = `
+CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(date)`;
+
 export interface DailyReport {
 	id: number;
 	date: string;

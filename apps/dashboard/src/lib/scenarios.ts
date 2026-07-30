@@ -34,6 +34,7 @@ export function detectScenario(current: DailyPoint, previous: DailyPoint | undef
 	const sessionsChange = percentChange(current.claritySessions, previous.claritySessions);
 	const bookingChange = percentChange(current.bookingArrivals, previous.bookingArrivals);
 	const scriptErrorChange = percentChange(current.clarityScriptErrors, previous.clarityScriptErrors);
+	const ga4ConversionsChange = percentChange(current.ga4Conversions, previous.ga4Conversions);
 
 	const errorSpiked = errorChange !== null && errorChange >= ERROR_SPIKE_THRESHOLD;
 	const scriptErrorSpiked = scriptErrorChange !== null && scriptErrorChange >= ERROR_SPIKE_THRESHOLD;
@@ -49,6 +50,7 @@ export function detectScenario(current: DailyPoint, previous: DailyPoint | undef
 		fmt('Sessões Clarity', sessionsChange),
 		fmt('Chegadas em agendamento', bookingChange),
 		fmt('Erros de script (Clarity)', scriptErrorChange),
+		fmt('Conversões GA4 (real)', ga4ConversionsChange),
 	];
 
 	if (errorSpiked && bookingDropped) {

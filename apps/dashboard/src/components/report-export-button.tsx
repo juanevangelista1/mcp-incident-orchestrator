@@ -41,58 +41,57 @@ export function ReportExportButton({
 	return (
 		<>
 			<button
-				type="button"
+				type='button'
 				onClick={() => dialogRef.current?.showModal()}
-				className="focus-visible:ring-ring inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
-			>
-				<FileDown className="size-3.5" />
+				className='focus-visible:ring-ring inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none'>
+				<FileDown className='size-3.5' />
 				Exportar relatório
 			</button>
 
 			<dialog
 				ref={dialogRef}
-				className="w-full max-w-sm rounded-lg border bg-card p-0 text-card-foreground backdrop:bg-black/50"
-			>
-				<div className="flex flex-col gap-4 p-5">
+				className='w-full max-w-sm absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-0 text-card-foreground backdrop:bg-black/50'>
+				<div className='flex flex-col gap-4 p-5'>
 					<div>
-						<h2 className="text-sm font-semibold">Exportar relatório</h2>
-						<p className="text-muted-foreground text-xs">
+						<h2 className='text-sm font-semibold'>Exportar relatório</h2>
+						<p className='text-muted-foreground text-xs'>
 							Gera um arquivo com os dados atualmente exibidos nesta página.
 						</p>
 					</div>
 
-					{error && <p className="text-rose-600 dark:text-rose-400 text-xs">{error}</p>}
+					{error && <p className='text-rose-600 dark:text-rose-400 text-xs'>{error}</p>}
 
-					<div className="flex flex-col gap-2">
+					<div className='flex flex-col gap-2'>
 						<button
-							type="button"
+							type='button'
 							onClick={() => handleExport('pdf')}
 							disabled={busy !== null}
-							className="focus-visible:ring-ring flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
-						>
-							{busy === 'pdf' ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+							className='focus-visible:ring-ring flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60'>
+							{busy === 'pdf' ? (
+								<Loader2 className='size-4 animate-spin' />
+							) : (
+								<FileText className='size-4' />
+							)}
 							PDF
 						</button>
 						<button
-							type="button"
+							type='button'
 							onClick={() => handleExport('excel')}
 							disabled={busy !== null}
-							className="focus-visible:ring-ring flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
-						>
+							className='focus-visible:ring-ring flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60'>
 							{busy === 'excel' ? (
-								<Loader2 className="size-4 animate-spin" />
+								<Loader2 className='size-4 animate-spin' />
 							) : (
-								<FileSpreadsheet className="size-4" />
+								<FileSpreadsheet className='size-4' />
 							)}
 							Excel
 						</button>
 					</div>
 
 					<button
-						type="button"
+						type='button'
 						onClick={() => dialogRef.current?.close()}
-						className="text-muted-foreground self-end text-xs hover:underline"
-					>
+						className='text-muted-foreground self-end text-xs hover:underline'>
 						Cancelar
 					</button>
 				</div>

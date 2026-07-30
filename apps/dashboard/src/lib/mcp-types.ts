@@ -99,3 +99,14 @@ export interface AwsLogsSummary {
 	totalEvents: number;
 	byLogStream: { logStreamName: string; count: number }[];
 }
+
+export interface Ga4Summary {
+	sessions: number;
+	totalUsers: number;
+	// `null` quando GA4_CONVERSION_EVENT_NAME não está configurado no mcp-server — sem
+	// fallback para "key events" genéricos, só o evento de conversão real, quando existir.
+	conversions: number | null;
+	conversionEventName: string | null;
+	topPagesBySessions: { page: string; sessions: number }[];
+	sessionsByDevice: { device: string; sessions: number }[];
+}

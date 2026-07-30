@@ -5,6 +5,7 @@ import {
 	DatadogLogsSummary,
 	SentryIssuesSummary,
 	AwsLogsSummary,
+	Ga4Summary,
 } from '@/lib/mcp-types';
 
 const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
@@ -46,6 +47,12 @@ export function getClarityRegionInsights(): Promise<ClarityRegionInsights | null
 
 export function getAwsSummary(): Promise<AwsLogsSummary | null> {
 	return safeCall<AwsLogsSummary>('summarize_aws_logs', {});
+}
+
+// GA4: conversão REAL (evento específico, se configurado no mcp-server via
+// GA4_CONVERSION_EVENT_NAME), ao lado do proxy de intenção que o Clarity já mede.
+export function getGa4Summary(): Promise<Ga4Summary | null> {
+	return safeCall<Ga4Summary>('fetch_ga4_summary', { numOfDays: 7 });
 }
 
 // Só chamado pelo digest diário (mesma razão de getClarityRegionInsights: soma à mesma cota

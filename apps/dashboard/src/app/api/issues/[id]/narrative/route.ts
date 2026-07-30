@@ -70,6 +70,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 						sessoes: percentChange(lastDay.claritySessions, prevDay?.claritySessions ?? null),
 						errosGerais: percentChange(lastDay.sentryOccurrences, prevDay?.sentryOccurrences ?? null),
 						agendamento: percentChange(lastDay.bookingArrivals, prevDay?.bookingArrivals ?? null),
+						conversoesGa4: percentChange(lastDay.ga4Conversions, prevDay?.ga4Conversions ?? null),
 					}
 				: null,
 			cenarioDetectado: scenario,

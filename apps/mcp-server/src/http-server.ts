@@ -49,5 +49,7 @@ const httpServer = createServer((req, res) => {
 });
 
 httpServer.listen(PORT, () => {
-	console.error(`Servidor MCP Incident Orchestrator (HTTP) rodando em http://localhost:${PORT}/mcp`);
+	console.error(
+		`Servidor MCP Orquestrador de Incidentes (HTTP) rodando em http://localhost:${PORT}/mcp`,
+	);
 });

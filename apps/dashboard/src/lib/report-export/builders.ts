@@ -138,9 +138,11 @@ export function buildReportsReport(params: {
 	sessionsBaseline: Baseline | null;
 	occurrencesBaseline: Baseline | null;
 	bookingBaseline: Baseline | null;
+	ga4ConversionsBaseline: Baseline | null;
 	scenario: Scenario | null;
 }): ReportDocument {
-	const { points, weeks, months, sessionsBaseline, occurrencesBaseline, bookingBaseline, scenario } = params;
+	const { points, weeks, months, sessionsBaseline, occurrencesBaseline, bookingBaseline, ga4ConversionsBaseline, scenario } =
+		params;
 	const sections: ReportDocument['sections'] = [];
 
 	if (scenario) {
@@ -154,22 +156,42 @@ export function buildReportsReport(params: {
 	sections.push({
 		kind: 'table',
 		heading: `Diário (últimos ${points.length} dia(s))`,
-		headers: ['Data', 'Sessões (Clarity)', 'Ocorrências (Sentry)', 'Chegadas em agendamento'],
-		rows: points.map((p) => [p.date, p.claritySessions ?? '—', p.sentryOccurrences ?? '—', p.bookingArrivals ?? '—']),
+		headers: ['Data', 'Sessões (Clarity)', 'Ocorrências (Sentry)', 'Chegadas em agendamento (proxy)', 'Conversões (GA4, real)'],
+		rows: points.map((p) => [
+			p.date,
+			p.claritySessions ?? '—',
+			p.sentryOccurrences ?? '—',
+			p.bookingArrivals ?? '—',
+			p.ga4Conversions ?? '—',
+		]),
 	});
 
 	sections.push({
 		kind: 'table',
 		heading: 'Semanal',
-		headers: ['Semana (segunda-feira)', 'Sessões', 'Ocorrências', 'Erros de script', 'Agendamentos'],
-		rows: weeks.map((w) => [w.key, w.claritySessions, w.sentryOccurrences, w.clarityScriptErrors, w.bookingArrivals]),
+		headers: ['Semana (segunda-feira)', 'Sessões', 'Ocorrências', 'Erros de script', 'Agendamentos (proxy)', 'Conversões (GA4, real)'],
+		rows: weeks.map((w) => [
+			w.key,
+			w.claritySessions,
+			w.sentryOccurrences,
+			w.clarityScriptErrors,
+			w.bookingArrivals,
+			w.ga4Conversions,
+		]),
 	});
 
 	sections.push({
 		kind: 'table',
 		heading: 'Mensal',
-		headers: ['Mês', 'Sessões', 'Ocorrências', 'Erros de script', 'Agendamentos'],
-		rows: months.map((m) => [m.key, m.claritySessions, m.sentryOccurrences, m.clarityScriptErrors, m.bookingArrivals]),
+		headers: ['Mês', 'Sessões', 'Ocorrências', 'Erros de script', 'Agendamentos (proxy)', 'Conversões (GA4, real)'],
+		rows: months.map((m) => [
+			m.key,
+			m.claritySessions,
+			m.sentryOccurrences,
+			m.clarityScriptErrors,
+			m.bookingArrivals,
+			m.ga4Conversions,
+		]),
 	});
 
 	sections.push({
@@ -182,9 +204,15 @@ export function buildReportsReport(params: {
 			{ label: 'Ocorrências — média', value: occurrencesBaseline ? occurrencesBaseline.avg.toFixed(0) : '—' },
 			{ label: 'Ocorrências — maior', value: occurrencesBaseline?.max ?? '—' },
 			{ label: 'Ocorrências — menor', value: occurrencesBaseline?.min ?? '—' },
-			{ label: 'Agendamentos — média', value: bookingBaseline ? bookingBaseline.avg.toFixed(0) : '—' },
-			{ label: 'Agendamentos — maior', value: bookingBaseline?.max ?? '—' },
-			{ label: 'Agendamentos — menor', value: bookingBaseline?.min ?? '—' },
+			{ label: 'Agendamentos (proxy) — média', value: bookingBaseline ? bookingBaseline.avg.toFixed(0) : '—' },
+			{ label: 'Agendamentos (proxy) — maior', value: bookingBaseline?.max ?? '—' },
+			{ label: 'Agendamentos (proxy) — menor', value: bookingBaseline?.min ?? '—' },
+			{
+				label: 'Conversões GA4 (real) — média',
+				value: ga4ConversionsBaseline ? ga4ConversionsBaseline.avg.toFixed(0) : '—',
+			},
+			{ label: 'Conversões GA4 (real) — maior', value: ga4ConversionsBaseline?.max ?? '—' },
+			{ label: 'Conversões GA4 (real) — menor', value: ga4ConversionsBaseline?.min ?? '—' },
 		],
 	});
 
