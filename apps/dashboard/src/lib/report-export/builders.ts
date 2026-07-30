@@ -224,6 +224,28 @@ export function buildReportsReport(params: {
 	};
 }
 
+export interface ChatConversationEntry {
+	question: string;
+	answer: string;
+	geminiAnalysis?: string;
+}
+
+// Exporta a conversa acumulada no chat de perguntas estáticas (chat/page.tsx) — cada entrada
+// já é texto pronto (resposta instantânea + análise Gemini opcional, gerada sob demanda),
+// nenhum dado novo é buscado aqui.
+export function buildChatConversationReport(conversation: ChatConversationEntry[]): ReportDocument {
+	return {
+		title: 'Chat — Perguntas e respostas',
+		subtitle: `${conversation.length} pergunta(s) respondida(s) nesta sessão`,
+		generatedAt: new Date(),
+		sections: conversation.map((entry) => ({
+			kind: 'text',
+			heading: entry.question,
+			body: entry.geminiAnalysis ? `${entry.answer}\n\nAnálise Gemini:\n${entry.geminiAnalysis}` : entry.answer,
+		})),
+	};
+}
+
 export function buildRouteComparisonReport(params: {
 	route: string;
 	issues: SentryIssue[];
