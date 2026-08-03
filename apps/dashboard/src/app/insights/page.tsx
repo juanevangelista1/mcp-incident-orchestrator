@@ -5,7 +5,7 @@ import { getGa4Summary } from '@/lib/mcp-summaries';
 export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageTitle } from '@/components/page-title';
-import { MetricBar } from '@/components/metric-bar';
+import { PaginatedMetricList } from '@/components/paginated-metric-list';
 import { ShareDonutChart } from '@/components/charts/share-donut-chart';
 import { FilterForm } from '@/components/filter-form';
 import { InsightsExport } from '@/components/insights-export';
@@ -150,22 +150,15 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 							<CardTitle>Páginas mais visitadas</CardTitle>
 						</CardHeader>
 						<CardContent>
-							{data.topPages.length > 0 ? (
-								<div className="flex flex-col gap-1">
-									{data.topPages.map((page, i) => (
-										<a key={`${page.url}-${i}`} href={`/insights?url=${encodeURIComponent(page.url)}`} className="block rounded-md hover:bg-accent/60">
-											<MetricBar
-												label={page.url}
-												value={page.sessions}
-												max={data.topPages[0].sessions}
-												barColor="bg-sky-500/15"
-											/>
-										</a>
-									))}
-								</div>
-							) : (
-								<p className="text-muted-foreground text-sm">Nenhuma página encontrada para esse filtro.</p>
-							)}
+							<PaginatedMetricList
+								items={data.topPages.map((p) => ({
+									label: p.url,
+									value: p.sessions,
+									href: `/insights?url=${encodeURIComponent(p.url)}`,
+								}))}
+								barColor="bg-sky-500/15"
+								emptyMessage="Nenhuma página encontrada para esse filtro."
+							/>
 						</CardContent>
 					</Card>
 
@@ -176,22 +169,15 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 								<CardDescription>Onde os usuários mais clicam repetidamente com frustração</CardDescription>
 							</CardHeader>
 							<CardContent>
-								{data.rageClicksByPage.length > 0 ? (
-									<div className="flex flex-col gap-1">
-										{data.rageClicksByPage.map((p, i) => (
-											<a key={`${p.url}-${i}`} href={`/insights?url=${encodeURIComponent(p.url)}`} className="block rounded-md hover:bg-accent/60">
-												<MetricBar
-													label={p.url}
-													value={p.count}
-													max={data.rageClicksByPage[0].count}
-													barColor="bg-amber-500/15"
-												/>
-											</a>
-										))}
-									</div>
-								) : (
-									<p className="text-muted-foreground text-sm">Nenhum rage click encontrado.</p>
-								)}
+								<PaginatedMetricList
+									items={data.rageClicksByPage.map((p) => ({
+										label: p.url,
+										value: p.count,
+										href: `/insights?url=${encodeURIComponent(p.url)}`,
+									}))}
+									barColor="bg-amber-500/15"
+									emptyMessage="Nenhum rage click encontrado."
+								/>
 							</CardContent>
 						</Card>
 
@@ -201,22 +187,15 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 								<CardDescription>Onde os usuários clicam em algo que não responde</CardDescription>
 							</CardHeader>
 							<CardContent>
-								{data.deadClicksByPage.length > 0 ? (
-									<div className="flex flex-col gap-1">
-										{data.deadClicksByPage.map((p, i) => (
-											<a key={`${p.url}-${i}`} href={`/insights?url=${encodeURIComponent(p.url)}`} className="block rounded-md hover:bg-accent/60">
-												<MetricBar
-													label={p.url}
-													value={p.count}
-													max={data.deadClicksByPage[0].count}
-													barColor="bg-orange-500/15"
-												/>
-											</a>
-										))}
-									</div>
-								) : (
-									<p className="text-muted-foreground text-sm">Nenhum dead click encontrado.</p>
-								)}
+								<PaginatedMetricList
+									items={data.deadClicksByPage.map((p) => ({
+										label: p.url,
+										value: p.count,
+										href: `/insights?url=${encodeURIComponent(p.url)}`,
+									}))}
+									barColor="bg-orange-500/15"
+									emptyMessage="Nenhum dead click encontrado."
+								/>
 							</CardContent>
 						</Card>
 
@@ -226,22 +205,15 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 								<CardDescription>Onde o Clarity registrou mais erros de JavaScript</CardDescription>
 							</CardHeader>
 							<CardContent>
-								{data.scriptErrorsByPage.length > 0 ? (
-									<div className="flex flex-col gap-1">
-										{data.scriptErrorsByPage.map((p, i) => (
-											<a key={`${p.url}-${i}`} href={`/insights?url=${encodeURIComponent(p.url)}`} className="block rounded-md hover:bg-accent/60">
-												<MetricBar
-													label={p.url}
-													value={p.count}
-													max={data.scriptErrorsByPage[0].count}
-													barColor="bg-rose-500/15"
-												/>
-											</a>
-										))}
-									</div>
-								) : (
-									<p className="text-muted-foreground text-sm">Nenhum erro de script encontrado.</p>
-								)}
+								<PaginatedMetricList
+									items={data.scriptErrorsByPage.map((p) => ({
+										label: p.url,
+										value: p.count,
+										href: `/insights?url=${encodeURIComponent(p.url)}`,
+									}))}
+									barColor="bg-rose-500/15"
+									emptyMessage="Nenhum erro de script encontrado."
+								/>
 							</CardContent>
 						</Card>
 					</section>
@@ -298,14 +270,10 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 							{ga4.topPagesBySessions.length > 0 && (
 								<div>
 									<h3 className="mb-1 text-xs font-medium">Páginas mais visitadas (GA4)</h3>
-									<div className="flex flex-col gap-1">
-										{ga4.topPagesBySessions.map((p, i) => (
-											<div key={`${p.page}-${i}`} className="flex items-center justify-between gap-2 text-xs">
-												<span className="truncate">{p.page}</span>
-												<span className="text-muted-foreground shrink-0">{p.sessions} sessão(ões)</span>
-											</div>
-										))}
-									</div>
+									<PaginatedMetricList
+										items={ga4.topPagesBySessions.map((p) => ({ label: p.page, value: p.sessions }))}
+										barColor="bg-teal-500/15"
+									/>
 								</div>
 							)}
 						</div>

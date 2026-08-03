@@ -2,9 +2,9 @@ import Link from 'next/link';
 import { callMcpTool } from '@/lib/mcp-client';
 import { SentryIssue, ClarityInsights, Ga4Summary } from '@/lib/mcp-types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { PageTitle } from '@/components/page-title';
 import { RouteComparisonExport } from '@/components/route-comparison-export';
+import { PaginatedIssueList } from '@/components/paginated-issue-list';
 import { RouteComparisonNarrativeAndExport } from '@/components/route-comparison-narrative-and-export';
 import { GitCompare } from 'lucide-react';
 
@@ -138,8 +138,6 @@ function RouteCard({ snapshot, placeholder }: { snapshot: RouteSnapshot | null; 
 		);
 	}
 
-	const top5 = [...snapshot.issues].sort((a, b) => b.count - a.count).slice(0, 5);
-
 	return (
 		<Card className="border-t-4 border-t-rose-500/70">
 			<CardHeader>
@@ -195,7 +193,7 @@ function RouteCard({ snapshot, placeholder }: { snapshot: RouteSnapshot | null; 
 
 				<div>
 					<div className="mb-1 flex items-center justify-between gap-2">
-						<h3 className="text-xs font-medium">Top erros</h3>
+						<h3 className="text-xs font-medium">Erros desta rota</h3>
 						<Link
 							href={`/issues?route=${encodeURIComponent(snapshot.route)}`}
 							className="text-muted-foreground text-xs hover:underline"
@@ -203,22 +201,7 @@ function RouteCard({ snapshot, placeholder }: { snapshot: RouteSnapshot | null; 
 							Ver todos →
 						</Link>
 					</div>
-					{top5.length > 0 ? (
-						<div className="flex flex-col gap-1">
-							{top5.map((issue) => (
-								<div key={issue.id} className="flex items-center justify-between gap-2 text-xs">
-									<span className="truncate" title={issue.title}>
-										{issue.title}
-									</span>
-									<Badge variant="secondary" className="shrink-0">
-										{issue.count}
-									</Badge>
-								</div>
-							))}
-						</div>
-					) : (
-						<p className="text-muted-foreground text-xs">Nenhum erro encontrado para essa rota.</p>
-					)}
+					<PaginatedIssueList issues={snapshot.issues} />
 				</div>
 			</CardContent>
 		</Card>

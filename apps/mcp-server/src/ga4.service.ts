@@ -15,6 +15,11 @@ interface FetchSummaryParams {
 // durante a navegação normal do dashboard, não uma proteção de cota escassa como no Clarity.
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
+// Mesma ideia do TOP_N_LIMIT em clarity.service.ts: dá pro dashboard paginar essas listas em
+// vez de só mostrar um top 5 fixo, sem custo de chamada extra (é a mesma resposta, só um
+// corte local maior).
+const TOP_N_LIMIT = 25;
+
 export class Ga4Service {
 	private readonly client: BetaAnalyticsDataClient;
 	private readonly propertyId: string;
@@ -143,8 +148,8 @@ export class Ga4Service {
 			totalUsers,
 			conversions,
 			conversionEventName: this.conversionEventName,
-			topPagesBySessions: topN(pageTotals, 5).map(([page, s]) => ({ page, sessions: s })),
-			sessionsByDevice: topN(deviceTotals, 5).map(([device, s]) => ({ device, sessions: s })),
+			topPagesBySessions: topN(pageTotals, TOP_N_LIMIT).map(([page, s]) => ({ page, sessions: s })),
+			sessionsByDevice: topN(deviceTotals, TOP_N_LIMIT).map(([device, s]) => ({ device, sessions: s })),
 		});
 
 		this.cache.set(cacheKey, result);

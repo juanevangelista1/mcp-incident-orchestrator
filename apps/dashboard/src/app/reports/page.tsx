@@ -6,6 +6,7 @@ import { DailyTrendChart } from '@/components/charts/daily-trend-chart';
 import { toDailyPoints, percentChange, weeklyRollup, monthlyRollup, baseline } from '@/lib/trends';
 import { detectScenario } from '@/lib/scenarios';
 import { ReportsNarrativeAndExport } from '@/components/reports-narrative-and-export';
+import { ReportsHistory } from '@/components/reports-history';
 import { FileText, TrendingUp, TrendingDown, Microscope } from 'lucide-react';
 
 // Lê o SQLite local a cada request — o histórico muda a cada digest novo, não deve
@@ -353,29 +354,7 @@ export default async function ReportsPage() {
 					Nenhum digest gerado ainda. Chame <code>/api/cron/daily-digest</code> para criar o primeiro.
 				</p>
 			) : (
-				<div className="flex flex-col gap-4">
-					{reports.map((report) => (
-						<Card key={report.id}>
-							<CardHeader>
-								<CardTitle>{report.date}</CardTitle>
-								<CardDescription>{report.summary}</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="flex flex-wrap gap-2 text-sm">
-									<Badge className="bg-rose-600/10 text-rose-600 dark:text-rose-400">
-										Sentry: {report.sentryCount}
-									</Badge>
-									<Badge className="bg-violet-600/10 text-violet-600 dark:text-violet-400">
-										Datadog: {report.datadogCount ?? 'indisponível'}
-									</Badge>
-									<Badge className="bg-sky-600/10 text-sky-600 dark:text-sky-400">
-										Clarity: {report.claritySessions ?? 'indisponível'}
-									</Badge>
-								</div>
-							</CardContent>
-						</Card>
-					))}
-				</div>
+				<ReportsHistory reports={reports} />
 			)}
 		</main>
 	);

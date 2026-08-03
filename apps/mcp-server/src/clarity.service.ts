@@ -18,6 +18,12 @@ import { TtlCache, cacheFilePath } from './lib/ttl-cache';
 // pergunta da IA voltava a gastar cota, mesmo com poucos minutos de uso.
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
+// Quantos itens cada lista "top N" (páginas/dispositivos/navegadores etc.) devolve. Subiu de
+// 5 pra isso pra dar pro dashboard paginar essas listas (ver PaginatedMetricList) em vez de
+// mostrar só o top 5 fixo — não é uma chamada de API a mais, é só o corte local de uma
+// resposta que já vinha completa.
+const TOP_N_LIMIT = 25;
+
 // Confirmado com uma chamada real à API (não documentado publicamente pela Microsoft):
 // cada item do array de resposta é uma métrica (`metricName`), e cada linha de
 // `information[]` traz o valor sob `sessionsCount` (cliques/erros) ou `totalSessionCount`
@@ -231,27 +237,27 @@ export class ClarityService {
 			quickBackRows = quickBackRows.filter(matchesDevice);
 		}
 
-		const topPages = this.groupSum(trafficRows, 'Url', 'totalSessionCount', 5).map((r) => ({
+		const topPages = this.groupSum(trafficRows, 'Url', 'totalSessionCount', TOP_N_LIMIT).map((r) => ({
 			url: r.key,
 			sessions: r.count,
 		}));
-		const rageClicksByPage = this.groupSum(rageRows, 'Url', 'sessionsCount', 5).map((r) => ({
+		const rageClicksByPage = this.groupSum(rageRows, 'Url', 'sessionsCount', TOP_N_LIMIT).map((r) => ({
 			url: r.key,
 			count: r.count,
 		}));
-		const deadClicksByPage = this.groupSum(deadRows, 'Url', 'sessionsCount', 5).map((r) => ({
+		const deadClicksByPage = this.groupSum(deadRows, 'Url', 'sessionsCount', TOP_N_LIMIT).map((r) => ({
 			url: r.key,
 			count: r.count,
 		}));
-		const sessionsByDevice = this.groupSum(trafficRows, 'Device', 'totalSessionCount', 5).map((r) => ({
+		const sessionsByDevice = this.groupSum(trafficRows, 'Device', 'totalSessionCount', TOP_N_LIMIT).map((r) => ({
 			device: r.key,
 			count: r.count,
 		}));
-		const sessionsByBrowser = this.groupSum(trafficRows, 'Browser', 'totalSessionCount', 5).map((r) => ({
+		const sessionsByBrowser = this.groupSum(trafficRows, 'Browser', 'totalSessionCount', TOP_N_LIMIT).map((r) => ({
 			browser: r.key,
 			count: r.count,
 		}));
-		const scriptErrorsByPage = this.groupSum(scriptRows, 'Url', 'sessionsCount', 5).map((r) => ({
+		const scriptErrorsByPage = this.groupSum(scriptRows, 'Url', 'sessionsCount', TOP_N_LIMIT).map((r) => ({
 			url: r.key,
 			count: r.count,
 		}));
@@ -308,11 +314,11 @@ export class ClarityService {
 		const trafficRows = this.rowsFor(metrics, METRIC_NAMES.traffic);
 
 		const result = clarityRegionInsightsSchema.parse({
-			sessionsByOS: this.groupSum(trafficRows, 'OS', 'totalSessionCount', 5).map((r) => ({
+			sessionsByOS: this.groupSum(trafficRows, 'OS', 'totalSessionCount', TOP_N_LIMIT).map((r) => ({
 				os: r.key,
 				count: r.count,
 			})),
-			sessionsByCountry: this.groupSum(trafficRows, 'Country', 'totalSessionCount', 5).map((r) => ({
+			sessionsByCountry: this.groupSum(trafficRows, 'Country', 'totalSessionCount', TOP_N_LIMIT).map((r) => ({
 				country: r.key,
 				count: r.count,
 			})),

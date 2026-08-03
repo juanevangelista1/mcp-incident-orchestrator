@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { callMcpTool } from '@/lib/mcp-client';
 import { SentryIssue, ClarityInsights } from '@/lib/mcp-types';
-import { classifySeverity, rankPagesByOccurrences, SEVERITY_BADGE_CLASS } from '@/lib/error-severity';
+import { classifySeverity, rankPagesByOccurrences, SEVERITY_BADGE_CLASS, Severity } from '@/lib/error-severity';
 
 // Depende de uma conexão ao vivo com o MCP server — nunca pode ser pré-renderizada em
 // build time (o servidor não existe/não está acessível durante o build, ex: no Vercel).
@@ -11,11 +11,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FilterForm } from '@/components/filter-form';
 import { PageTitle } from '@/components/page-title';
-import { MetricBar } from '@/components/metric-bar';
+import { PaginatedMetricList } from '@/components/paginated-metric-list';
 import { IssuesExport } from '@/components/issues-export';
 import { Pagination, PAGE_SIZE } from '@/components/pagination';
 import { toQueryString } from '@/lib/query-string';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ArrowUpDown } from 'lucide-react';
+
+const SEVERITY_RANK: Record<Severity, number> = { Crítico: 4, Alto: 3, Médio: 2, Baixo: 1 };
+type SortKey = 'title' | 'severity' | 'count';
+const SORT_KEYS: SortKey[] = ['title', 'severity', 'count'];
 
 const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
 
@@ -35,11 +39,15 @@ type SearchParams = Promise<{
 	search?: string;
 	level?: string;
 	page?: string;
+	sort?: string;
+	dir?: string;
 }>;
 
 export default async function IssuesPage({ searchParams }: { searchParams: SearchParams }) {
-	const { environment, route, startDate, endDate, search, level, page: pageParam } = await searchParams;
+	const { environment, route, startDate, endDate, search, level, page: pageParam, sort, dir } = await searchParams;
 	const page = Math.max(1, Number(pageParam) || 1);
+	const sortKey: SortKey = SORT_KEYS.includes(sort as SortKey) ? (sort as SortKey) : 'count';
+	const sortDir: 'asc' | 'desc' = dir === 'asc' ? 'asc' : 'desc';
 
 	let allIssues: SentryIssue[] = [];
 	let emptyMessage = 'Nenhum erro encontrado para esse filtro.';
@@ -65,12 +73,23 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 	// exibida — senão o mesmo erro mudaria de classificação só por causa da paginação.
 	const rankedAll = classifySeverity(allIssues);
 	const severityById = new Map(rankedAll.map((r) => [r.id, r.severity]));
-	const issues = allIssues.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+	// Ordena o conjunto inteiro (não só a página exibida) antes de fatiar — senão trocar de
+	// página no meio de uma ordenação por título, por exemplo, ficaria inconsistente.
+	const sortedIssues = [...allIssues].sort((a, b) => {
+		let cmp: number;
+		if (sortKey === 'title') cmp = a.title.localeCompare(b.title);
+		else if (sortKey === 'severity') {
+			cmp = SEVERITY_RANK[severityById.get(a.id) ?? 'Baixo'] - SEVERITY_RANK[severityById.get(b.id) ?? 'Baixo'];
+		} else cmp = a.count - b.count;
+		return sortDir === 'asc' ? cmp : -cmp;
+	});
+	const issues = sortedIssues.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
 	// Ranking de páginas: Sentry (occurrences agrupadas por rota/culprit) cruzado com
 	// scriptErrorsByPage do Clarity. Duas fontes, duas metodologias diferentes — nunca somadas,
 	// sempre em colunas separadas (ver rationale na Fase E do plano).
-	const sentryPageRank = rankPagesByOccurrences(allIssues, 8);
+	const sentryPageRank = rankPagesByOccurrences(allIssues, 50);
 	let clarityScriptErrors: ClarityInsights['scriptErrorsByPage'] = [];
 	try {
 		const { data } = await callMcpTool<ClarityInsights>('fetch_clarity_insights', { numOfDays: 3 });
@@ -78,6 +97,14 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 	} catch {
 		// Clarity opcional/indisponível não deve impedir a listagem de issues do Sentry.
 	}
+
+	// Clicar numa coluna já ordenada por ela inverte a direção; clicar numa coluna nova ordena
+	// desc por padrão. Reseta pra página 1 — a página atual pode nem existir mais na nova ordem.
+	const sortHref = (key: SortKey) => {
+		const nextDir = sortKey === key && sortDir === 'desc' ? 'asc' : 'desc';
+		return `/issues${toQueryString({ environment, route, startDate, endDate, search, level, sort: key, dir: nextDir })}`;
+	};
+	const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === 'desc' ? '↓' : '↑') : '');
 
 	return (
 		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
@@ -155,10 +182,22 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>Título</TableHead>
+									<TableHead>
+										<Link href={sortHref('title')} className="inline-flex items-center gap-1 hover:underline">
+											Título <ArrowUpDown className="size-3" /> {sortIndicator('title')}
+										</Link>
+									</TableHead>
 									<TableHead>Rota / Culprit</TableHead>
-									<TableHead>Severidade</TableHead>
-									<TableHead className="text-right">Ocorrências</TableHead>
+									<TableHead>
+										<Link href={sortHref('severity')} className="inline-flex items-center gap-1 hover:underline">
+											Severidade <ArrowUpDown className="size-3" /> {sortIndicator('severity')}
+										</Link>
+									</TableHead>
+									<TableHead className="text-right">
+										<Link href={sortHref('count')} className="inline-flex items-center justify-end gap-1 hover:underline">
+											Ocorrências <ArrowUpDown className="size-3" /> {sortIndicator('count')}
+										</Link>
+									</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -193,7 +232,7 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 						page={page}
 						totalPages={totalPages}
 						basePath="/issues"
-						params={{ environment, route, startDate, endDate, search, level }}
+						params={{ environment, route, startDate, endDate, search, level, sort: sortKey, dir: sortDir }}
 					/>
 				</>
 			)}
@@ -216,26 +255,15 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 									</Link>
 								)}
 							</div>
-							{sentryPageRank.length > 0 ? (
-								<div className="flex flex-col gap-1">
-									{sentryPageRank.map((r, i) => (
-										<Link
-											key={`${r.page}-${i}`}
-											href={`/issues?route=${encodeURIComponent(r.page)}`}
-											className="block rounded-md hover:bg-accent/60"
-										>
-											<MetricBar
-												label={r.page}
-												value={r.sentryOccurrences}
-												max={sentryPageRank[0].sentryOccurrences}
-												barColor="bg-rose-500/15"
-											/>
-										</Link>
-									))}
-								</div>
-							) : (
-								<p className="text-muted-foreground text-sm">Sem dados.</p>
-							)}
+							<PaginatedMetricList
+								items={sentryPageRank.map((r) => ({
+									label: r.page,
+									value: r.sentryOccurrences,
+									href: `/issues?route=${encodeURIComponent(r.page)}`,
+								}))}
+								barColor="bg-rose-500/15"
+								emptyMessage="Sem dados."
+							/>
 						</CardContent>
 					</Card>
 
@@ -248,21 +276,15 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 									diferentes do Sentry, colunas nunca somadas
 								</p>
 							</div>
-							{clarityScriptErrors.length > 0 ? (
-								<div className="flex flex-col gap-1">
-									{clarityScriptErrors.map((p, i) => (
-										<Link
-											key={`${p.url}-${i}`}
-											href={`/insights?url=${encodeURIComponent(p.url)}`}
-											className="block rounded-md hover:bg-accent/60"
-										>
-											<MetricBar label={p.url} value={p.count} max={clarityScriptErrors[0].count} barColor="bg-sky-500/15" />
-										</Link>
-									))}
-								</div>
-							) : (
-								<p className="text-muted-foreground text-sm">Sem dados (Clarity indisponível ou sem erros no período).</p>
-							)}
+							<PaginatedMetricList
+								items={clarityScriptErrors.map((p) => ({
+									label: p.url,
+									value: p.count,
+									href: `/insights?url=${encodeURIComponent(p.url)}`,
+								}))}
+								barColor="bg-sky-500/15"
+								emptyMessage="Sem dados (Clarity indisponível ou sem erros no período)."
+							/>
 						</CardContent>
 					</Card>
 				</section>
