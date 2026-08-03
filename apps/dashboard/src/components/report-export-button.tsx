@@ -23,12 +23,15 @@ export function ReportExportButton({
 		setError('');
 		try {
 			const doc = buildDocument();
+			// Sufixo de data em todo export (ferramenta + data no nome do arquivo) — sem isso,
+			// exportar duas vezes no mesmo dia sobrescreve o arquivo anterior com o mesmo nome.
+			const filename = `${filenameBase}-${doc.generatedAt.toISOString().slice(0, 10)}`;
 			if (format === 'pdf') {
 				const { downloadAsPdf } = await import('@/lib/report-export/to-pdf');
-				await downloadAsPdf(doc, filenameBase);
+				await downloadAsPdf(doc, filename);
 			} else {
 				const { downloadAsExcel } = await import('@/lib/report-export/to-excel');
-				await downloadAsExcel(doc, filenameBase);
+				await downloadAsExcel(doc, filename);
 			}
 			dialogRef.current?.close();
 		} catch (e) {

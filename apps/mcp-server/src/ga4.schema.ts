@@ -9,6 +9,10 @@ export const fetchGa4SummaryInputSchema = z.object({
 		.max(90)
 		.default(7)
 		.describe('Janela de dias para o resumo do GA4 (1 a 90).'),
+	pagePath: z
+		.string()
+		.optional()
+		.describe('Filtra sessões/conversões por um trecho da URL/rota (busca parcial, ex: "/imovel/").'),
 });
 
 // `conversions`/`conversionEventName` ficam `null` quando GA4_CONVERSION_EVENT_NAME não está

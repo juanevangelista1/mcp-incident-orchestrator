@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { callMcpTool } from '@/lib/mcp-client';
-import { SentryIssue, ClarityInsights } from '@/lib/mcp-types';
+import { SentryIssue, ClarityInsights, Ga4Summary } from '@/lib/mcp-types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageTitle } from '@/components/page-title';
 import { RouteComparisonExport } from '@/components/route-comparison-export';
+import { RouteComparisonNarrativeAndExport } from '@/components/route-comparison-narrative-and-export';
 import { GitCompare } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -19,11 +20,12 @@ interface RouteSnapshot {
 	totalOccurrences: number;
 	clarity: ClarityInsights | null;
 	clarityError: string | null;
+	ga4: Ga4Summary | null;
 }
 
-// Busca Sentry (sempre) + Clarity (melhor esforço — filtrado por `url`, mesma cota
-// compartilhada de 10/dia documentada em /insights; se estourar, a comparação segue só com
-// os dados do Sentry, que não tem esse limite).
+// Busca Sentry (sempre) + Clarity + GA4 (melhor esforço — Clarity compartilha a mesma cota de
+// 10/dia documentada em /insights; GA4 não tem esse teto, mas depende de credenciais
+// configuradas). Se qualquer uma faltar, a comparação segue com o que tiver disponível.
 async function fetchRouteSnapshot(route: string): Promise<RouteSnapshot> {
 	const { data } = await callMcpTool<{ issues: SentryIssue[] }>('fetch_sentry_issues', {
 		projectSlug: PROJECT_SLUG,
@@ -43,7 +45,15 @@ async function fetchRouteSnapshot(route: string): Promise<RouteSnapshot> {
 		clarityError = error instanceof Error ? error.message : 'Clarity indisponível.';
 	}
 
-	return { route, issues, totalOccurrences, clarity, clarityError };
+	let ga4: Ga4Summary | null = null;
+	try {
+		const ga4Result = await callMcpTool<Ga4Summary>('fetch_ga4_summary', { numOfDays: 7, pagePath: route });
+		ga4 = ga4Result.data ?? null;
+	} catch {
+		// GA4 opcional (sem credenciais configuradas) não deve impedir o resto da comparação.
+	}
+
+	return { route, issues, totalOccurrences, clarity, clarityError, ga4 };
 }
 
 export default async function CompareRoutesPage({ searchParams }: { searchParams: SearchParams }) {
@@ -109,6 +119,10 @@ export default async function CompareRoutesPage({ searchParams }: { searchParams
 					<RouteCard snapshot={snapshotB} placeholder="Rota B" />
 				</section>
 			)}
+
+			{snapshotA && snapshotB && (
+				<RouteComparisonNarrativeAndExport snapshotA={snapshotA} snapshotB={snapshotB} />
+			)}
 		</main>
 	);
 }
@@ -138,6 +152,7 @@ function RouteCard({ snapshot, placeholder }: { snapshot: RouteSnapshot | null; 
 						issues={snapshot.issues}
 						totalOccurrences={snapshot.totalOccurrences}
 						clarity={snapshot.clarity}
+						ga4={snapshot.ga4}
 					/>
 				</div>
 				<CardDescription>Sentry: is:unresolved, últimos resultados</CardDescription>
@@ -161,6 +176,14 @@ function RouteCard({ snapshot, placeholder }: { snapshot: RouteSnapshot | null; 
 						<p className="text-xl font-semibold">
 							{snapshot.clarity ? `${snapshot.clarity.scriptErrorPercent}%` : '—'}
 						</p>
+					</div>
+					<div>
+						<p className="text-muted-foreground text-xs">Sessões (GA4, real)</p>
+						<p className="text-xl font-semibold">{snapshot.ga4?.sessions ?? '—'}</p>
+					</div>
+					<div>
+						<p className="text-muted-foreground text-xs">Conversões (GA4, real)</p>
+						<p className="text-xl font-semibold">{snapshot.ga4?.conversions ?? '—'}</p>
 					</div>
 				</div>
 

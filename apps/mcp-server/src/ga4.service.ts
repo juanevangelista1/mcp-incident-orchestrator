@@ -4,6 +4,10 @@ import { TtlCache, cacheFilePath } from './lib/ttl-cache';
 
 interface FetchSummaryParams {
 	numOfDays: number;
+	// Filtro opcional por trecho da URL (contains, mesmo estilo do filtro `url` do Clarity) —
+	// usado pelo comparador de rotas pra pegar sessões/conversões de UMA rota específica em
+	// vez do total do site.
+	pagePath?: string;
 }
 
 // GA4 Data API não tem o teto duro de 10 req/dia do Clarity (cota padrão: 25 mil
@@ -66,6 +70,17 @@ export class Ga4Service {
 		console.error('[CACHE MISS] Buscando resumo na API do GA4.');
 		const dateRange = { startDate: `${params.numOfDays}daysAgo`, endDate: 'today' };
 
+		// `undefined` (não filtrar) quando `pagePath` não é passado — a API do GA4 aceita
+		// `dimensionFilter: undefined` normalmente.
+		const pagePathFilter = params.pagePath
+			? {
+					filter: {
+						fieldName: 'pagePath',
+						stringFilter: { value: params.pagePath, matchType: 'CONTAINS' as const },
+					},
+				}
+			: undefined;
+
 		let mainReport;
 		try {
 			[mainReport] = await this.client.runReport({
@@ -73,6 +88,7 @@ export class Ga4Service {
 				dateRanges: [dateRange],
 				dimensions: [{ name: 'pagePath' }, { name: 'deviceCategory' }],
 				metrics: [{ name: 'sessions' }, { name: 'totalUsers' }],
+				dimensionFilter: pagePathFilter,
 			});
 		} catch (error) {
 			this.assertOk(error);
@@ -95,17 +111,23 @@ export class Ga4Service {
 
 		let conversions: number | null = null;
 		if (this.conversionEventName) {
+			const eventNameFilter = {
+				filter: {
+					fieldName: 'eventName',
+					stringFilter: { value: this.conversionEventName, matchType: 'EXACT' as const },
+				},
+			};
 			try {
 				const [conversionReport] = await this.client.runReport({
 					property: `properties/${this.propertyId}`,
 					dateRanges: [dateRange],
 					metrics: [{ name: 'eventCount' }],
-					dimensionFilter: {
-						filter: {
-							fieldName: 'eventName',
-							stringFilter: { value: this.conversionEventName, matchType: 'EXACT' },
-						},
-					},
+					// GA4 permite filtrar por uma dimensão (pagePath) mesmo sem pedi-la no resultado —
+					// combinamos com o filtro de evento via andGroup quando o comparador de rotas pede
+					// conversões de UMA rota específica, em vez do total do site.
+					dimensionFilter: pagePathFilter
+						? { andGroup: { expressions: [eventNameFilter, pagePathFilter] } }
+						: eventNameFilter,
 				});
 				conversions = Number(conversionReport.rows?.[0]?.metricValues?.[0]?.value ?? 0);
 			} catch (error) {
