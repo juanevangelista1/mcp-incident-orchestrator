@@ -1,5 +1,6 @@
 import { callMcpTool } from '@/lib/mcp-client';
 import { ClarityInsights } from '@/lib/mcp-types';
+import { getGa4Summary } from '@/lib/mcp-summaries';
 
 export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,8 +23,11 @@ const DAYS_OPTIONS = [
 // API do Clarity (a chave de cache é a combinação exata de numOfDays/url/device). Com um
 // conjunto pequeno e conhecido de combinações, dá pra estimar o gasto de cota — texto livre
 // deixava isso ilimitado.
+// O valor tem que ser o que a própria API do Clarity devolve na dimensão Device — confirmado
+// ao vivo que ela usa "PC" para desktop (não "Desktop"), senão o filtro nunca bate com
+// nenhuma linha e volta sempre 0 sessões. O rótulo continua "Desktop" pro usuário.
 const DEVICE_OPTIONS = [
-	{ value: 'Desktop', label: 'Desktop' },
+	{ value: 'PC', label: 'Desktop' },
 	{ value: 'Mobile', label: 'Mobile' },
 	{ value: 'Tablet', label: 'Tablet' },
 ];
@@ -50,6 +54,10 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 		emptyMessage = error.message;
 	}
 
+	// Conversão REAL do GA4 (não é proxy como o resto desta página) — mesma função já usada
+	// pelo digest diário. `null` sem gastar cota se o plugin não estiver configurado.
+	const ga4 = await getGa4Summary();
+
 	return (
 		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
 			<header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -59,7 +67,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 					title="Insights — Microsoft Clarity"
 					subtitle={<p className="text-muted-foreground text-sm">Últimos {numOfDays} dia(s)</p>}
 				/>
-				{data && <InsightsExport data={data} numOfDays={numOfDays} urlFilter={url} deviceFilter={device} />}
+				{data && <InsightsExport data={data} numOfDays={numOfDays} urlFilter={url} deviceFilter={device} ga4={ga4} />}
 			</header>
 
 			<FilterForm
@@ -259,6 +267,56 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 					</section>
 				</>
 			)}
+
+			<Card className="border-t-4 border-t-teal-500/70">
+				<CardHeader>
+					<CardTitle>Conversão real — Google Analytics 4</CardTitle>
+					<CardDescription>
+						Diferente do resto desta página (comportamento/proxy do Clarity), estes números são a
+						conversão REAL de um evento específico do GA4 — nunca some com sessões do Clarity.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					{ga4 ? (
+						<div className="flex flex-col gap-4">
+							<div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+								<div>
+									<p className="text-muted-foreground text-xs">Sessões (GA4)</p>
+									<p className="text-xl font-semibold">{ga4.sessions}</p>
+								</div>
+								<div>
+									<p className="text-muted-foreground text-xs">Usuários (GA4)</p>
+									<p className="text-xl font-semibold">{ga4.totalUsers}</p>
+								</div>
+								<div>
+									<p className="text-muted-foreground text-xs">
+										Conversões{ga4.conversionEventName ? ` (${ga4.conversionEventName})` : ''}
+									</p>
+									<p className="text-xl font-semibold">{ga4.conversions ?? '—'}</p>
+								</div>
+							</div>
+							{ga4.topPagesBySessions.length > 0 && (
+								<div>
+									<h3 className="mb-1 text-xs font-medium">Páginas mais visitadas (GA4)</h3>
+									<div className="flex flex-col gap-1">
+										{ga4.topPagesBySessions.map((p, i) => (
+											<div key={`${p.page}-${i}`} className="flex items-center justify-between gap-2 text-xs">
+												<span className="truncate">{p.page}</span>
+												<span className="text-muted-foreground shrink-0">{p.sessions} sessão(ões)</span>
+											</div>
+										))}
+									</div>
+								</div>
+							)}
+						</div>
+					) : (
+						<p className="text-muted-foreground text-sm">
+							GA4 não configurado no MCP server (<code>GA4_PROPERTY_ID</code>/<code>GA4_CLIENT_EMAIL</code>/
+							<code>GA4_PRIVATE_KEY</code>).
+						</p>
+					)}
+				</CardContent>
+			</Card>
 		</main>
 	);
 }

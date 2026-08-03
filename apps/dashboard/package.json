@@ -22,6 +22,7 @@
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.25.0",
     "next": "16.2.11",
+    "node-cron": "^3.0.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.10.1",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.1",
+    "@types/node-cron": "^3.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "cross-env": "^10.1.0",
