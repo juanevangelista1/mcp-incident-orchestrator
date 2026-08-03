@@ -5,8 +5,7 @@ import { PageTitle } from '@/components/page-title';
 import { DailyTrendChart } from '@/components/charts/daily-trend-chart';
 import { toDailyPoints, percentChange, weeklyRollup, monthlyRollup, baseline } from '@/lib/trends';
 import { detectScenario } from '@/lib/scenarios';
-import { NarrativeReport } from '@/components/narrative-report';
-import { ReportsExport } from '@/components/reports-export';
+import { ReportsNarrativeAndExport } from '@/components/reports-narrative-and-export';
 import { FileText, TrendingUp, TrendingDown, Microscope } from 'lucide-react';
 
 // Lê o SQLite local a cada request — o histórico muda a cada digest novo, não deve
@@ -74,16 +73,6 @@ export default async function ReportsPage() {
 						>
 							Baixar CSV
 						</a>
-						<ReportsExport
-							points={points}
-							weeks={weeks}
-							months={months}
-							sessionsBaseline={sessionsBaseline}
-							occurrencesBaseline={occurrencesBaseline}
-							bookingBaseline={bookingBaseline}
-							ga4ConversionsBaseline={ga4ConversionsBaseline}
-							scenario={scenario}
-						/>
 					</div>
 				)}
 			</header>
@@ -125,7 +114,16 @@ export default async function ReportsPage() {
 						</Card>
 					)}
 
-					<NarrativeReport />
+					<ReportsNarrativeAndExport
+						points={points}
+						weeks={weeks}
+						months={months}
+						sessionsBaseline={sessionsBaseline}
+						occurrencesBaseline={occurrencesBaseline}
+						bookingBaseline={bookingBaseline}
+						ga4ConversionsBaseline={ga4ConversionsBaseline}
+						scenario={scenario}
+					/>
 
 					<Card className="border-t-4 border-t-emerald-500/70">
 						<CardHeader>

@@ -6,7 +6,9 @@ import { Sparkles, Loader2 } from 'lucide-react';
 
 // Gera sob demanda (não a cada carregamento da página) — cada geração é uma chamada real ao
 // Gemini, então fica atrás de um clique explícito do usuário, não automático.
-export function NarrativeReport() {
+// `onGenerated` opcional: permite que um componente pai (ex: reports-narrative-and-export.tsx)
+// guarde o texto e o inclua no export em PDF/Excel — antes essa análise só existia na tela.
+export function NarrativeReport({ onGenerated }: { onGenerated?: (text: string) => void } = {}) {
 	const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
 	const [report, setReport] = useState('');
 	const [error, setError] = useState('');
@@ -20,6 +22,7 @@ export function NarrativeReport() {
 			if (!res.ok) throw new Error(data.error ?? 'Falha ao gerar relatório.');
 			setReport(data.report);
 			setState('done');
+			onGenerated?.(data.report);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : 'Falha ao gerar relatório.');
 			setState('error');

@@ -6,7 +6,15 @@ import { Search, Loader2 } from 'lucide-react';
 
 // Gera sob demanda (nunca automático no carregamento da página) — cada geração é uma chamada
 // real ao Gemini, mesmo padrão de narrative-report.tsx em /reports.
-export function IssueInvestigation({ issueId }: { issueId: string }) {
+// `onGenerated` opcional: permite que o wrapper combinado (issue-investigation-and-export.tsx)
+// inclua esse texto no PDF/Excel exportado.
+export function IssueInvestigation({
+	issueId,
+	onGenerated,
+}: {
+	issueId: string;
+	onGenerated?: (text: string) => void;
+}) {
 	const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
 	const [report, setReport] = useState('');
 	const [error, setError] = useState('');
@@ -20,6 +28,7 @@ export function IssueInvestigation({ issueId }: { issueId: string }) {
 			if (!res.ok) throw new Error(data.error ?? 'Falha ao gerar investigação.');
 			setReport(data.report);
 			setState('done');
+			onGenerated?.(data.report);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : 'Falha ao gerar investigação.');
 			setState('error');
