@@ -7,6 +7,7 @@ import { listDailyReports } from '@/db/client';
 import { toDailyPoints, percentChange } from '@/lib/trends';
 import { detectScenario } from '@/lib/scenarios';
 import { getGeminiModel, isGeminiConfigured, isGeminiMocked } from '@/lib/gemini';
+import { findUnverifiedNumbers } from '@/lib/verify-narrative';
 
 export const dynamic = 'force-dynamic';
 
@@ -128,7 +129,8 @@ ${details.stackTrace.join('\n')}`;
 
 	try {
 		const { text } = await generateText({ model: getGeminiModel(), prompt });
-		return NextResponse.json({ report: text });
+		const unverifiedNumbers = findUnverifiedNumbers(text, evidence);
+		return NextResponse.json({ report: text, unverifiedNumbers });
 	} catch (error) {
 		return NextResponse.json(
 			{ error: error instanceof Error ? error.message : 'Falha ao gerar investigação com o Gemini.' },

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportExportButton } from '@/components/report-export-button';
 import { buildRouteComparisonFullReport, type RouteComparisonSnapshot } from '@/lib/report-export/builders';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, TriangleAlert } from 'lucide-react';
 
 // Uma investigação só, comparando as duas rotas (não uma por card) — é uma pergunta única
 // ("por que essas duas rotas diferem?"), então um botão só, mesmo padrão sob-demanda de
@@ -19,6 +19,7 @@ export function RouteComparisonNarrativeAndExport({
 	const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
 	const [narrative, setNarrative] = useState('');
 	const [error, setError] = useState('');
+	const [unverifiedNumbers, setUnverifiedNumbers] = useState<string[]>([]);
 
 	async function generate() {
 		setState('loading');
@@ -32,6 +33,7 @@ export function RouteComparisonNarrativeAndExport({
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? 'Falha ao gerar comparação.');
 			setNarrative(data.report);
+			setUnverifiedNumbers(data.unverifiedNumbers ?? []);
 			setState('done');
 		} catch (e) {
 			setError(e instanceof Error ? e.message : 'Falha ao gerar comparação.');
@@ -73,7 +75,16 @@ export function RouteComparisonNarrativeAndExport({
 					{state === 'error' ? (
 						<p className="text-rose-600 dark:text-rose-400 text-sm">{error}</p>
 					) : (
-						<article className="whitespace-pre-wrap text-sm">{narrative}</article>
+						<>
+							{unverifiedNumbers.length > 0 && (
+								<p className="mb-3 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+									<TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+									Números citados no texto que não batem com os dados brutos — revise antes de
+									confiar: {unverifiedNumbers.join(', ')}
+								</p>
+							)}
+							<article className="whitespace-pre-wrap text-sm">{narrative}</article>
+						</>
 					)}
 				</CardContent>
 			)}

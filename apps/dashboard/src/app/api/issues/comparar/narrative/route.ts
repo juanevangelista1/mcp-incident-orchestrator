@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateText } from 'ai';
 import { getGeminiModel, isGeminiConfigured, isGeminiMocked } from '@/lib/gemini';
+import { findUnverifiedNumbers } from '@/lib/verify-narrative';
 import type { RouteComparisonSnapshot } from '@/lib/report-export/builders';
 
 export const dynamic = 'force-dynamic';
@@ -83,7 +84,8 @@ ${JSON.stringify(evidence, null, 2)}`;
 
 	try {
 		const { text } = await generateText({ model: getGeminiModel(), prompt });
-		return NextResponse.json({ report: text });
+		const unverifiedNumbers = findUnverifiedNumbers(text, evidence);
+		return NextResponse.json({ report: text, unverifiedNumbers });
 	} catch (error) {
 		return NextResponse.json(
 			{ error: error instanceof Error ? error.message : 'Falha ao gerar comparação com o Gemini.' },
