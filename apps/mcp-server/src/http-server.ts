@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import './tracer.js';
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createServices, buildMcpServer } from './server-factory.js';

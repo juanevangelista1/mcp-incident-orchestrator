@@ -23,7 +23,7 @@ export function Nav() {
 	return (
 		<nav
 			aria-label='Navegação principal'
-			className='sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80'>
+			className='sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80'>
 			<div className='mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-8'>
 				<Link
 					href='/'

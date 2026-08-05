@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getSentrySummary, getDatadogSummary, getClarityInsights } from '@/lib/mcp-summaries';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MetricBar } from '@/components/metric-bar';
+import { PaginatedMetricList } from '@/components/paginated-metric-list';
 import { AlertTriangle, Activity, MousePointerClick, Users, type LucideIcon } from 'lucide-react';
 
 // Depende de uma conexão ao vivo com o MCP server — nunca pode ser pré-renderizada em
@@ -90,21 +90,14 @@ export default async function OverviewPage() {
 					</CardHeader>
 					<CardContent>
 						{sentry && sentry.topCulprits.length > 0 ? (
-							<div className='flex flex-col gap-1'>
-								{sentry.topCulprits.map((c) => (
-									<Link
-										key={c.culprit}
-										href={`/issues?search=${encodeURIComponent(c.culprit)}`}
-										className='block rounded-md hover:bg-accent/60'>
-										<MetricBar
-											label={c.culprit}
-											value={c.count}
-											max={sentry.topCulprits[0].count}
-											barColor='bg-rose-500/15'
-										/>
-									</Link>
-								))}
-							</div>
+							<PaginatedMetricList
+								items={sentry.topCulprits.map((c) => ({
+									label: c.culprit,
+									value: c.count,
+									href: `/issues?search=${encodeURIComponent(c.culprit)}`,
+								}))}
+								barColor='bg-rose-500/15'
+							/>
 						) : (
 							<EmptyState label='Nenhum erro encontrado ou Sentry indisponível.' />
 						)}
@@ -135,21 +128,14 @@ export default async function OverviewPage() {
 									<Badge variant='outline'>Dead clicks: {clarity.deadClicks}</Badge>
 									<Badge variant='outline'>Erros de script: {clarity.scriptErrors}</Badge>
 								</div>
-								<div className='flex flex-col gap-1'>
-									{clarity.topPages.map((p, i) => (
-										<Link
-											key={`${p.url}-${i}`}
-											href={`/insights?url=${encodeURIComponent(p.url)}`}
-											className='block rounded-md hover:bg-accent/60'>
-											<MetricBar
-												label={p.url}
-												value={p.sessions}
-												max={clarity.topPages[0].sessions}
-												barColor='bg-sky-500/15'
-											/>
-										</Link>
-									))}
-								</div>
+								<PaginatedMetricList
+									items={clarity.topPages.map((p) => ({
+										label: p.url,
+										value: p.sessions,
+										href: `/insights?url=${encodeURIComponent(p.url)}`,
+									}))}
+									barColor='bg-sky-500/15'
+								/>
 							</div>
 						) : (
 							<EmptyState label='Clarity não configurado no MCP server.' />
@@ -175,21 +161,14 @@ export default async function OverviewPage() {
 					</CardHeader>
 					<CardContent>
 						{datadog && datadog.byService.length > 0 ? (
-							<div className='flex flex-col gap-1'>
-								{datadog.byService.slice(0, 5).map((s) => (
-									<Link
-										key={s.service}
-										href={`/logs?service=${encodeURIComponent(s.service)}`}
-										className='block rounded-md hover:bg-accent/60'>
-										<MetricBar
-											label={s.service}
-											value={s.count}
-											max={datadog.byService[0].count}
-											barColor='bg-violet-500/15'
-										/>
-									</Link>
-								))}
-							</div>
+							<PaginatedMetricList
+								items={datadog.byService.map((s) => ({
+									label: s.service,
+									value: s.count,
+									href: `/logs?service=${encodeURIComponent(s.service)}`,
+								}))}
+								barColor='bg-violet-500/15'
+							/>
 						) : (
 							<EmptyState label='Nenhum log encontrado ou Datadog indisponível.' />
 						)}
