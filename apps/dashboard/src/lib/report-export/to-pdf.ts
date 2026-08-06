@@ -1,7 +1,55 @@
+import type { jsPDF } from 'jspdf';
 import type { ReportDocument } from './types';
+import { parseMarkdownLines } from './markdown-lines';
 
 const MARGIN = 40;
 const PAGE_WIDTH = 595; // A4 em pt
+const PAGE_BREAK_Y = 750;
+
+// Desenha o corpo de uma seção de texto (Markdown) linha a linha: heading vira negrito
+// maior, bullet/numerada ganham recuo, o resto é parágrafo normal — nenhuma delas mantém
+// os símbolos "##"/"**"/"-" originais no PDF final.
+function renderMarkdownBody(pdf: jsPDF, body: string, x: number, startY: number, maxWidth: number): number {
+	let y = startY;
+	for (const line of parseMarkdownLines(body)) {
+		if (line.kind === 'blank') {
+			y += 6;
+			continue;
+		}
+
+		if (y > PAGE_BREAK_Y) {
+			pdf.addPage();
+			y = MARGIN;
+		}
+
+		let text = line.text;
+		let indent = 0;
+		let fontSize = 10;
+		let bold = false;
+
+		if (line.kind === 'heading') {
+			bold = true;
+			fontSize = 11;
+			y += 4;
+		} else if (line.kind === 'bullet') {
+			text = `•  ${line.text}`;
+			indent = 12;
+		} else if (line.kind === 'numbered') {
+			text = `${line.marker}  ${line.text}`;
+			indent = 12;
+		}
+
+		pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+		pdf.setFontSize(fontSize);
+		const wrapped: string[] = pdf.splitTextToSize(text, maxWidth - indent);
+		pdf.text(wrapped, x + indent, y);
+		y += wrapped.length * (fontSize + 2) + (bold ? 4 : 2);
+	}
+
+	pdf.setFont('helvetica', 'normal');
+	pdf.setFontSize(10);
+	return y;
+}
 
 // Import dinâmico pelo mesmo motivo do to-excel.ts: jspdf/autotable só carregam no clique.
 export async function downloadAsPdf(doc: ReportDocument, filenameBase: string): Promise<void> {
@@ -48,10 +96,8 @@ export async function downloadAsPdf(doc: ReportDocument, filenameBase: string): 
 			}
 			y += 8;
 		} else if (section.kind === 'text') {
-			pdf.setFontSize(10);
-			const lines = pdf.splitTextToSize(section.body, PAGE_WIDTH - MARGIN * 2);
-			pdf.text(lines, MARGIN, y);
-			y += lines.length * 12 + 8;
+			y = renderMarkdownBody(pdf, section.body, MARGIN, y, PAGE_WIDTH - MARGIN * 2);
+			y += 8;
 		} else if (section.kind === 'table') {
 			if (section.description) {
 				pdf.setFontSize(9);

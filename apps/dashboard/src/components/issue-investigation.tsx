@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { MarkdownReport } from '@/components/markdown-report';
 import { Search, Loader2, TriangleAlert } from 'lucide-react';
 
 // Gera sob demanda (nunca automático no carregamento da página) — cada geração é uma chamada
@@ -73,7 +74,7 @@ export function IssueInvestigation({
 									confiar: {unverifiedNumbers.join(', ')}
 								</p>
 							)}
-							<article className="whitespace-pre-wrap text-sm">{report}</article>
+							<MarkdownReport text={report} />
 						</>
 					)}
 				</CardContent>

@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { getSentrySummary, getDatadogSummary, getClarityInsights } from '@/lib/mcp-summaries';
+import { getSentrySummary, getDatadogErrorSummary, getClarityInsights } from '@/lib/mcp-summaries';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PaginatedMetricList } from '@/components/paginated-metric-list';
-import { AlertTriangle, Activity, MousePointerClick, Users, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, Bug, MousePointerClick, Users, type LucideIcon } from 'lucide-react';
 
 // Depende de uma conexão ao vivo com o MCP server — nunca pode ser pré-renderizada em
 // build time (o servidor não existe/não está acessível durante o build, ex: no Vercel).
@@ -14,7 +14,7 @@ const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
 export default async function OverviewPage() {
 	const [sentryResult, datadogResult, clarityResult] = await Promise.allSettled([
 		getSentrySummary(),
-		getDatadogSummary(),
+		getDatadogErrorSummary(),
 		getClarityInsights(),
 	]);
 
@@ -52,11 +52,11 @@ export default async function OverviewPage() {
 					borderColor='border-t-rose-500/70'
 				/>
 				<KpiCard
-					href='/logs'
-					label='Logs (Datadog)'
-					value={datadog?.totalLogs}
+					href='/error-tracking'
+					label='Erros (Datadog)'
+					value={datadog?.totalOccurrences}
 					unavailable={!datadog}
-					icon={Activity}
+					icon={Bug}
 					accent='text-violet-600 bg-violet-600/10 dark:text-violet-400'
 					borderColor='border-t-violet-500/70'
 				/>
@@ -149,15 +149,15 @@ export default async function OverviewPage() {
 							<span
 								aria-hidden='true'
 								className='flex size-7 items-center justify-center rounded-md bg-violet-600/10 text-violet-600 dark:text-violet-400'>
-								<Activity className='size-4' />
+								<Bug className='size-4' />
 							</span>
 							<Link
-								href='/logs'
+								href='/error-tracking'
 								className='hover:underline'>
-								<CardTitle>Logs por serviço (Datadog)</CardTitle>
+								<CardTitle>Erros por serviço (Datadog)</CardTitle>
 							</Link>
 						</div>
-						<CardDescription>Volume por serviço no período monitorado</CardDescription>
+						<CardDescription>Ocorrências por serviço, últimas 24h (Error Tracking)</CardDescription>
 					</CardHeader>
 					<CardContent>
 						{datadog && datadog.byService.length > 0 ? (
@@ -165,12 +165,12 @@ export default async function OverviewPage() {
 								items={datadog.byService.map((s) => ({
 									label: s.service,
 									value: s.count,
-									href: `/logs?service=${encodeURIComponent(s.service)}`,
+									href: `/error-tracking?query=${encodeURIComponent(`service:${s.service}`)}`,
 								}))}
 								barColor='bg-violet-500/15'
 							/>
 						) : (
-							<EmptyState label='Nenhum log encontrado ou Datadog indisponível.' />
+							<EmptyState label='Nenhuma issue encontrada ou Datadog indisponível.' />
 						)}
 					</CardContent>
 				</Card>

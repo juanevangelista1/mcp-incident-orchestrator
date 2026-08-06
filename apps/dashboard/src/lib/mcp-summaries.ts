@@ -2,7 +2,8 @@ import { callMcpTool } from '@/lib/mcp-client';
 import {
 	ClarityInsights,
 	ClarityRegionInsights,
-	DatadogLogsSummary,
+	DatadogErrorIssue,
+	DatadogErrorSummary,
 	SentryIssuesSummary,
 	AwsLogsSummary,
 	Ga4Summary,
@@ -13,7 +14,7 @@ const BOOKING_URL_PATTERN = process.env.CLARITY_BOOKING_URL_PATTERN ?? '';
 
 // Compartilhado entre a página Overview e o digest diário (cron). Cada fetcher engole seus
 // próprios erros e devolve `null` — o motivo mais comum é um plugin opcional desligado no MCP
-// server (ex: "Tool summarize_datadog_logs not found"), não um bug, então não deve derrubar
+// server (ex: "Tool fetch_datadog_error_issues not found"), não um bug, então não deve derrubar
 // quem chamou (nem a página via Promise.allSettled, nem o cron via Promise.all).
 async function safeCall<T>(name: string, args: Record<string, unknown>): Promise<T | null> {
 	try {
@@ -31,8 +32,34 @@ export function getSentrySummary(): Promise<SentryIssuesSummary | null> {
 	return safeCall<SentryIssuesSummary>('summarize_sentry_issues', { projectSlug: PROJECT_SLUG });
 }
 
-export function getDatadogSummary(): Promise<DatadogLogsSummary | null> {
-	return safeCall<DatadogLogsSummary>('summarize_datadog_logs', {});
+// Error Tracking é o único produto Datadog integrado aqui — Logs não é usado porque a conta
+// não tem log source configurado no onboarding do Datadog (Logs sempre voltava vazio).
+// Agregado aqui em vez de virar tool própria porque fetch_datadog_error_issues já traz tudo
+// numa chamada só (sem round-trip extra ao MCP).
+export async function getDatadogErrorSummary(): Promise<DatadogErrorSummary | null> {
+	const result = await safeCall<{ issues: DatadogErrorIssue[] }>('fetch_datadog_error_issues', {
+		minutesAgo: 1440,
+		limit: 50,
+	});
+	if (!result) return null;
+
+	const { issues } = result;
+	const totalOccurrences = issues.reduce((sum, issue) => sum + issue.totalCount, 0);
+
+	const byServiceMap = new Map<string, number>();
+	for (const issue of issues) {
+		byServiceMap.set(issue.service, (byServiceMap.get(issue.service) ?? 0) + issue.totalCount);
+	}
+	const byService = [...byServiceMap.entries()]
+		.sort((a, b) => b[1] - a[1])
+		.map(([service, count]) => ({ service, count }));
+
+	const topIssues = [...issues]
+		.sort((a, b) => b.totalCount - a.totalCount)
+		.slice(0, 10)
+		.map((issue) => ({ label: `${issue.errorType}: ${issue.errorMessage}`, count: issue.totalCount }));
+
+	return { totalIssues: issues.length, totalOccurrences, byService, topIssues };
 }
 
 export function getClarityInsights(): Promise<ClarityInsights | null> {

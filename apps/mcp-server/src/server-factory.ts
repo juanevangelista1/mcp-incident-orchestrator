@@ -8,10 +8,7 @@ import { registerCaptureErrorsTool } from './tools/capture-errors.tool.js';
 import { registerCountErrorsTool } from './tools/count-errors.tool.js';
 import { registerSummarizeErrorsTool } from './tools/summarize-errors.tool.js';
 import { registerErrorDetailsTool } from './tools/error-details.tool.js';
-import { registerFetchDatadogLogsTool } from './tools/fetch-datadog-logs.tool.js';
-import { registerCountDatadogLogsTool } from './tools/count-datadog-logs.tool.js';
-import { registerSummarizeDatadogLogsTool } from './tools/summarize-datadog-logs.tool.js';
-import { registerDatadogLogDetailsTool } from './tools/datadog-log-details.tool.js';
+import { registerFetchDatadogErrorIssuesTool } from './tools/fetch-datadog-error-issues.tool.js';
 import { registerFetchClarityInsightsTool } from './tools/fetch-clarity-insights.tool.js';
 import { registerFetchClarityRegionInsightsTool } from './tools/fetch-clarity-region-insights.tool.js';
 import { registerFetchAwsLogsTool } from './tools/fetch-aws-logs.tool.js';
@@ -79,10 +76,7 @@ export function buildMcpServer(services: OrchestratorServices): McpServer {
 	registerErrorDetailsTool(server, services.sentry);
 
 	if (services.datadog) {
-		registerFetchDatadogLogsTool(server, services.datadog);
-		registerCountDatadogLogsTool(server, services.datadog);
-		registerSummarizeDatadogLogsTool(server, services.datadog);
-		registerDatadogLogDetailsTool(server, services.datadog);
+		registerFetchDatadogErrorIssuesTool(server, services.datadog);
 	}
 
 	if (services.clarity) {

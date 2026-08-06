@@ -1,6 +1,6 @@
 import {
 	getSentrySummary,
-	getDatadogSummary,
+	getDatadogErrorSummary,
 	getClarityInsights,
 	getClarityRegionInsights,
 	getClarityBookingInsights,
@@ -15,7 +15,7 @@ import { NewDailyReport } from '@/db/schema';
 // de nenhuma IA, então o digest nunca falha só porque o Gemini está fora do ar/sem chave.
 function buildFallbackSummary(data: {
 	sentry: Awaited<ReturnType<typeof getSentrySummary>>;
-	datadog: Awaited<ReturnType<typeof getDatadogSummary>>;
+	datadog: Awaited<ReturnType<typeof getDatadogErrorSummary>>;
 	clarity: Awaited<ReturnType<typeof getClarityInsights>>;
 	aws: Awaited<ReturnType<typeof getAwsSummary>>;
 	ga4: Awaited<ReturnType<typeof getGa4Summary>>;
@@ -25,7 +25,7 @@ function buildFallbackSummary(data: {
 		parts.push(`${data.sentry.totalIssues} erro(s) não resolvidos no Sentry (${data.sentry.totalOccurrences} ocorrências)`);
 	}
 	if (data.datadog) {
-		parts.push(`${data.datadog.totalLogs} log(s) recentes no Datadog`);
+		parts.push(`${data.datadog.totalIssues} issue(s) de erro no Datadog Error Tracking (${data.datadog.totalOccurrences} ocorrências)`);
 	}
 	if (data.aws) {
 		parts.push(`${data.aws.totalEvents} evento(s) recentes no CloudWatch`);
@@ -61,7 +61,7 @@ function buildSummary(fallback: string, raw: Record<string, unknown>): Promise<s
 export async function runDailyDigest(): Promise<{ report: NewDailyReport }> {
 	const [sentry, datadog, clarity, clarityRegion, clarityBooking, aws, ga4] = await Promise.all([
 		getSentrySummary(),
-		getDatadogSummary(),
+		getDatadogErrorSummary(),
 		getClarityInsights(),
 		// Chamada de dimensões extra (Device/OS/Country) do Clarity — só o digest faz essa
 		// chamada (ver comentário em mcp-summaries.ts), nunca a navegação interativa.
@@ -81,7 +81,7 @@ export async function runDailyDigest(): Promise<{ report: NewDailyReport }> {
 		date: now.toISOString().slice(0, 10),
 		summary,
 		sentryCount: sentry?.totalIssues ?? 0,
-		datadogCount: datadog?.totalLogs ?? null,
+		datadogCount: datadog?.totalOccurrences ?? null,
 		claritySessions: clarity?.totalSessions ?? null,
 		awsCount: aws?.totalEvents ?? null,
 		rawData: JSON.stringify(raw),

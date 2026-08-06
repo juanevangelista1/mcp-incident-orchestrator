@@ -39,23 +39,26 @@ export interface SentryIssuesSummary {
 	topCulprits: { culprit: string; count: number }[];
 }
 
-export interface DatadogLogEntry {
+export interface DatadogErrorIssue {
 	id: string;
-	timestamp: string;
+	errorMessage: string;
+	errorType: string;
 	service: string;
-	status: string;
-	message: string;
-	host: string;
+	platform: string;
+	state: string;
+	isCrash: boolean;
+	firstSeen: string;
+	lastSeen: string;
+	totalCount: number;
 }
 
-export interface DatadogLogDetails extends DatadogLogEntry {
-	tags: Record<string, string>;
-}
-
-export interface DatadogLogsSummary {
-	totalLogs: number;
-	byStatus: { status: string; count: number }[];
+// Agregado client-side em mcp-summaries.ts a partir de fetch_datadog_error_issues — não é
+// uma tool própria do mcp-server (não precisa: os dados já vêm todos numa chamada só).
+export interface DatadogErrorSummary {
+	totalIssues: number;
+	totalOccurrences: number;
 	byService: { service: string; count: number }[];
+	topIssues: { label: string; count: number }[];
 }
 
 export interface ClarityInsights {

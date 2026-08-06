@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { MarkdownReport } from '@/components/markdown-report';
 import { ReportExportButton } from '@/components/report-export-button';
 import { buildRouteComparisonFullReport, type RouteComparisonSnapshot } from '@/lib/report-export/builders';
 import { Sparkles, Loader2, TriangleAlert } from 'lucide-react';
@@ -83,7 +84,7 @@ export function RouteComparisonNarrativeAndExport({
 									confiar: {unverifiedNumbers.join(', ')}
 								</p>
 							)}
-							<article className="whitespace-pre-wrap text-sm">{narrative}</article>
+							<MarkdownReport text={narrative} />
 						</>
 					)}
 				</CardContent>

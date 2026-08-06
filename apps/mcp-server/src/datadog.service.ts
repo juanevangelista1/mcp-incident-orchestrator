@@ -1,17 +1,10 @@
-import {
-	DatadogLogEntry,
-	DatadogLogDetails,
-	DatadogLogsSummary,
-	datadogLogEntrySchema,
-	datadogLogDetailsSchema,
-} from './datadog.schema';
+import { DatadogErrorIssue, datadogErrorIssueSchema } from './datadog.schema';
 import { TtlCache, cacheFilePath } from './lib/ttl-cache';
 
-interface LogQueryParams {
+interface ErrorIssueQueryParams {
 	query?: string;
-	service?: string;
-	environment?: string;
 	minutesAgo: number;
+	limit: number;
 }
 
 export class DatadogService {
@@ -20,16 +13,11 @@ export class DatadogService {
 	private readonly site: string;
 
 	// Mesma proteção usada no SentryService: se a IA repetir a mesma busca em poucos segundos,
-	// respondemos da memória em vez de gastar mais uma chamada (o Datadog cobra por consulta de log).
-	private readonly searchCache = new TtlCache<DatadogLogEntry[]>(
+	// respondemos da memória em vez de gastar mais uma chamada.
+	private readonly errorIssuesCache = new TtlCache<DatadogErrorIssue[]>(
 		30_000,
 		500,
-		cacheFilePath(__dirname, 'datadog-search.json'),
-	);
-	private readonly detailsCache = new TtlCache<DatadogLogDetails>(
-		60_000,
-		500,
-		cacheFilePath(__dirname, 'datadog-log-details.json'),
+		cacheFilePath(__dirname, 'datadog-error-issues.json'),
 	);
 
 	constructor() {
@@ -60,7 +48,7 @@ export class DatadogService {
 		if (response.status === 401 || response.status === 403) {
 			throw new Error(
 				`Falha ao ${context}: ${response.status} ${response.statusText}. ` +
-					`Verifique se DATADOG_API_KEY/DATADOG_APP_KEY estão corretas e se a Application Key tem a permissão 'logs_read_data'.`,
+					`Verifique se DATADOG_API_KEY/DATADOG_APP_KEY estão corretas.`,
 			);
 		}
 
@@ -71,141 +59,67 @@ export class DatadogService {
 		throw new Error(`Falha ao ${context}: ${response.status} ${response.statusText}`);
 	}
 
-	// Montagem única da query no formato de tags do Datadog (ex: "service:api env:production timeout"),
-	// reaproveitada por queryLogs, countLogs e (indiretamente) summarizeLogs.
-	private buildSearchQuery(params: LogQueryParams): string {
-		const filters: string[] = [];
-		if (params.query) filters.push(params.query);
-		if (params.service) filters.push(`service:${params.service}`);
-		if (params.environment) filters.push(`env:${params.environment}`);
-		return filters.length > 0 ? filters.join(' ') : '*';
-	}
-
-	// Captura: lista os logs mais recentes que casam com o filtro.
-	public async queryLogs(params: LogQueryParams & { limit: number }): Promise<DatadogLogEntry[]> {
+	// Error Tracking: agrupa erros de aplicação (APM/RUM/backend) em issues — não depende de
+	// Logs estar configurado no Datadog (que precisa de um log source explícito no onboarding).
+	// Resultado da busca (`data`) só traz o total_count; os campos de verdade (mensagem,
+	// service, state) vêm em `included` e precisam ser cruzados pelo id — é assim que a API
+	// do Datadog devolve (JSON:API).
+	public async searchErrorIssues(params: ErrorIssueQueryParams): Promise<DatadogErrorIssue[]> {
 		const cacheKey = JSON.stringify(params);
-		const cached = this.searchCache.get(cacheKey);
+		const cached = this.errorIssuesCache.get(cacheKey);
 		if (cached) {
-			console.error('[CACHE HIT] Retornando logs do Datadog da memória.');
+			console.error('[CACHE HIT] Retornando issues do Error Tracking da memória.');
 			return cached;
 		}
 
-		console.error('[CACHE MISS] Buscando logs na API do Datadog.');
-		const url = `https://api.${this.site}/api/v2/logs/events/search`;
+		console.error('[CACHE MISS] Buscando issues na API de Error Tracking do Datadog.');
+		const now = Date.now();
+		const from = now - params.minutesAgo * 60_000;
+
+		const url = `https://api.${this.site}/api/v2/error-tracking/issues/search?include=issue`;
 		const response = await fetch(url, {
 			method: 'POST',
 			headers: this.authHeaders(),
 			body: JSON.stringify({
-				filter: {
-					query: this.buildSearchQuery(params),
-					from: `now-${params.minutesAgo}m`,
-					to: 'now',
+				data: {
+					type: 'search_request',
+					attributes: {
+						query: params.query || '*',
+						from,
+						to: now,
+						persona: 'ALL',
+						order_by: 'TOTAL_COUNT',
+					},
 				},
-				sort: '-timestamp',
-				page: { limit: params.limit },
 			}),
 		});
 
-		await this.assertOk(response, 'buscar logs');
+		await this.assertOk(response, 'buscar issues do Error Tracking');
 
 		const data = await response.json();
+		const results: any[] = data.data ?? [];
+		const includedById = new Map<string, any>((data.included ?? []).map((item: any) => [item.id, item]));
 
-		// Fronteira da Anti-Corruption Layer: validamos contra o schema em vez de confiar
-		// cegamente no shape do JSON do Datadog.
-		const logs = datadogLogEntrySchema.array().parse(
-			(data.data || []).map((entry: any) => ({
-				id: entry.id,
-				timestamp: entry.attributes?.timestamp ?? 'desconhecido',
-				service: entry.attributes?.service ?? 'desconhecido',
-				status: entry.attributes?.status ?? 'desconhecido',
-				message: entry.attributes?.message ?? '',
-				host: entry.attributes?.host ?? 'desconhecido',
-			})),
+		const issues = datadogErrorIssueSchema.array().parse(
+			results.slice(0, params.limit).map((result) => {
+				const issueId = result.relationships?.issue?.data?.id ?? result.id;
+				const attrs = includedById.get(issueId)?.attributes ?? {};
+				return {
+					id: issueId,
+					errorMessage: attrs.error_message ?? 'desconhecido',
+					errorType: attrs.error_type ?? 'desconhecido',
+					service: attrs.service ?? 'desconhecido',
+					platform: attrs.platform ?? 'desconhecido',
+					state: attrs.state ?? 'desconhecido',
+					isCrash: attrs.is_crash ?? false,
+					firstSeen: attrs.first_seen ? new Date(attrs.first_seen).toISOString() : 'desconhecido',
+					lastSeen: attrs.last_seen ? new Date(attrs.last_seen).toISOString() : 'desconhecido',
+					totalCount: result.attributes?.total_count ?? 0,
+				};
+			}),
 		);
 
-		this.searchCache.set(cacheKey, logs);
-		return logs;
-	}
-
-	// Quantidade de logs: usa o endpoint de agregação (analytics/aggregate), que devolve só a
-	// contagem, em vez de baixar o corpo de cada log só para contar o tamanho do array.
-	public async countLogs(params: LogQueryParams): Promise<number> {
-		const url = `https://api.${this.site}/api/v2/logs/analytics/aggregate`;
-		const response = await fetch(url, {
-			method: 'POST',
-			headers: this.authHeaders(),
-			body: JSON.stringify({
-				filter: {
-					query: this.buildSearchQuery(params),
-					from: `now-${params.minutesAgo}m`,
-					to: 'now',
-				},
-				compute: [{ aggregation: 'count' }],
-			}),
-		});
-
-		await this.assertOk(response, 'contar logs');
-
-		const data = await response.json();
-		const count = data.data?.buckets?.[0]?.computes?.c0;
-		return count ? parseInt(count, 10) : 0;
-	}
-
-	// Resumo dos logs: NÃO faz uma nova chamada de rede. Reaproveita queryLogs (até 50 logs)
-	// e agrega em memória — mesma decisão de design do summarizeIssues no SentryService.
-	public async summarizeLogs(params: LogQueryParams): Promise<DatadogLogsSummary> {
-		const logs = await this.queryLogs({ ...params, limit: 50 });
-
-		const statusCounts = new Map<string, number>();
-		const serviceCounts = new Map<string, number>();
-		for (const log of logs) {
-			statusCounts.set(log.status, (statusCounts.get(log.status) ?? 0) + 1);
-			serviceCounts.set(log.service, (serviceCounts.get(log.service) ?? 0) + 1);
-		}
-
-		const sortedDesc = (counts: Map<string, number>) =>
-			[...counts.entries()].sort((a, b) => b[1] - a[1]);
-
-		return {
-			totalLogs: logs.length,
-			byStatus: sortedDesc(statusCounts).map(([status, count]) => ({ status, count })),
-			byService: sortedDesc(serviceCounts).map(([service, count]) => ({ service, count })),
-		};
-	}
-
-	// Detalhes de um log específico (todas as tags, sem truncamento) — sob demanda, com cache.
-	public async getLogDetails(logId: string): Promise<DatadogLogDetails> {
-		const cached = this.detailsCache.get(logId);
-		if (cached) {
-			console.error(`[CACHE HIT] Retornando detalhes do log ${logId} da memória.`);
-			return cached;
-		}
-
-		console.error(`[CACHE MISS] Buscando log ${logId} na API do Datadog.`);
-		const url = `https://api.${this.site}/api/v2/logs/events/${encodeURIComponent(logId)}`;
-		const response = await fetch(url, { headers: this.authHeaders() });
-		await this.assertOk(response, `buscar os detalhes do log '${logId}'`);
-
-		const data = await response.json();
-		const attributes = data.data?.attributes;
-		const rawTags: string[] = attributes?.tags ?? [];
-		const tags = rawTags.reduce((acc: Record<string, string>, tag: string) => {
-			const [key, value] = tag.split(':');
-			if (key && value) acc[key] = value;
-			return acc;
-		}, {});
-
-		const result = datadogLogDetailsSchema.parse({
-			id: data.data?.id,
-			timestamp: attributes?.timestamp ?? 'desconhecido',
-			service: attributes?.service ?? 'desconhecido',
-			status: attributes?.status ?? 'desconhecido',
-			message: attributes?.message ?? '',
-			host: attributes?.host ?? 'desconhecido',
-			tags,
-		});
-
-		this.detailsCache.set(logId, result);
-		return result;
+		this.errorIssuesCache.set(cacheKey, issues);
+		return issues;
 	}
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { MarkdownReport } from '@/components/markdown-report';
 import { Sparkles, Loader2, TriangleAlert } from 'lucide-react';
 
 // Gera sob demanda (não a cada carregamento da página) — cada geração é uma chamada real ao
@@ -67,9 +68,7 @@ export function NarrativeReport({ onGenerated }: { onGenerated?: (text: string) 
 									confiar: {unverifiedNumbers.join(', ')}
 								</p>
 							)}
-							<article className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm">
-								{report}
-							</article>
+							<MarkdownReport text={report} />
 						</>
 					)}
 				</CardContent>

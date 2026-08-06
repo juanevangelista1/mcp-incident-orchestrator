@@ -122,14 +122,14 @@ mcp-incident-orchestrator/
 │       │   ├── app/
 │       │   │   ├── page.tsx              # Overview (KPIs + widgets estilo Clarity)
 │       │   │   ├── issues/                # Erros do Sentry (lista + detalhe estilo Sentry)
-│       │   │   ├── logs/                  # Logs do Datadog (lista + detalhe)
+│       │   │   ├── error-tracking/        # Erros do Datadog Error Tracking (lista)
 │       │   │   ├── insights/              # Insights do Clarity
 │       │   │   ├── reports/               # Histórico de digests diários (SQLite)
 │       │   │   ├── chat/                  # Chat com Gemini + tools do MCP
 │       │   │   └── api/
 │       │   │       ├── chat/              # Rota do streaming de chat (Vercel AI SDK)
 │       │   │       ├── cron/daily-digest/ # Job diário: agrega as 4 fontes + Gemini + grava no SQLite
-│       │   │       └── export/            # Exportação CSV (issues/logs/reports)
+│       │   │       └── export/            # Exportação CSV (issues/reports)
 │       │   ├── components/                # UI compartilhada (Nav, FilterForm, MetricBar, PageTitle...)
 │       │   ├── lib/
 │       │   │   ├── mcp-client.ts          # Client MCP genérico (1 conexão por chamada)
@@ -146,7 +146,7 @@ mcp-incident-orchestrator/
 
 #### O padrão de 4 tools por fonte
 
-Cada integração (Sentry, Datadog, Clarity*, AWS CloudWatch) segue o mesmo contrato de 4 ferramentas:
+Cada integração (Sentry, Datadog*, Clarity**, AWS CloudWatch) segue o mesmo contrato de 4 ferramentas:
 
 | Tool | O que faz |
 |---|---|
@@ -155,7 +155,9 @@ Cada integração (Sentry, Datadog, Clarity*, AWS CloudWatch) segue o mesmo cont
 | **summarize** (`summarize_*`) | Agrega os dados capturados (top causas, distribuição por status/serviço) — quando possível, reaproveita a chamada de `capture` em vez de bater na API de novo |
 | **details** (`get_*_details`) | Busca o contexto completo de um item específico (stack trace, breadcrumbs, contexto de navegador/SO/geolocalização, requisição HTTP) |
 
-*Clarity expõe hoje só a tool de insights agregados (a API pública do Clarity não tem um endpoint de "listar sessões individuais" equivalente aos outros três).
+*Datadog expõe hoje só a tool `fetch_datadog_error_issues` (Error Tracking) — não usa Logs, porque a conta não tem log source configurado no onboarding do Datadog.
+
+**Clarity expõe hoje só a tool de insights agregados (a API pública do Clarity não tem um endpoint de "listar sessões individuais" equivalente aos outros três).
 
 #### Anti-Corruption Layer
 
@@ -176,11 +178,11 @@ Cada `service` mantém um `TtlCache` (TTL configurável por fonte) para evitar b
 
 - **Overview** — KPIs das 4 fontes e widgets estilo Microsoft Clarity (cards com faixa de cor por fonte, listas com barra proporcional preenchida em vez de números soltos).
 - **Issues (Sentry)** — lista filtrável por ambiente/rota/intervalo de datas; ao clicar, abre um detalhe **estilo Sentry**: contexto (navegador, SO, dispositivo, localização, idioma, fuso horário), requisição HTTP, stack trace e linha do tempo de breadcrumbs.
-- **Logs (Datadog)** — mesmo padrão de lista + detalhe para logs.
+- **Error Tracking (Datadog)** — lista de issues agrupadas por erro (não Logs: a conta não tem log source configurado no onboarding do Datadog).
 - **Insights (Clarity)** — sessões, rage clicks, dead clicks, erros de script e páginas mais visitadas.
 - **Relatórios** — histórico dos digests diários gerados pelo cron, lidos do SQLite local.
 - **Chat** — conversa em linguagem natural com o Gemini, que tem acesso automático a todas as tools do MCP (perguntas como "o que aconteceu ontem na tela de checkout?" disparam as tools certas sozinhas).
-- **Exportação CSV** — issues, logs e relatórios podem ser baixados como planilha, replicando os mesmos filtros aplicados na tela.
+- **Exportação CSV** — issues do Sentry e relatórios podem ser baixados como planilha, replicando os mesmos filtros aplicados na tela.
 - **Mobile-first** — listas viram cards empilhados em telas pequenas e tabela completa em telas maiores; formulários de filtro em grid 2 colunas no mobile.
 - **Acessibilidade** — skip link, `lang="pt-BR"` correto, `aria-current`/`aria-expanded`/`aria-live` onde relevante, foco visível em todos os elementos interativos, cursor de mão em todo elemento clicável.
 
@@ -374,14 +376,14 @@ mcp-incident-orchestrator/
 │       │   ├── app/
 │       │   │   ├── page.tsx              # Overview (KPIs + Clarity-style widgets)
 │       │   │   ├── issues/                # Sentry errors (list + Sentry-style detail)
-│       │   │   ├── logs/                  # Datadog logs (list + detail)
+│       │   │   ├── error-tracking/        # Datadog Error Tracking errors (list)
 │       │   │   ├── insights/              # Clarity insights
 │       │   │   ├── reports/               # Daily digest history (SQLite)
 │       │   │   ├── chat/                  # Gemini chat + MCP tools
 │       │   │   └── api/
 │       │   │       ├── chat/              # Chat streaming route (Vercel AI SDK)
 │       │   │       ├── cron/daily-digest/ # Daily job: aggregates the 4 sources + Gemini + writes to SQLite
-│       │   │       └── export/            # CSV export (issues/logs/reports)
+│       │   │       └── export/            # CSV export (issues/reports)
 │       │   ├── components/                # Shared UI (Nav, FilterForm, MetricBar, PageTitle...)
 │       │   ├── lib/
 │       │   │   ├── mcp-client.ts          # Generic MCP client (one connection per call)
@@ -398,7 +400,7 @@ mcp-incident-orchestrator/
 
 #### The 4-tools-per-source pattern
 
-Every integration (Sentry, Datadog, Clarity*, AWS CloudWatch) follows the same 4-tool contract:
+Every integration (Sentry, Datadog*, Clarity**, AWS CloudWatch) follows the same 4-tool contract:
 
 | Tool | What it does |
 |---|---|
@@ -407,7 +409,9 @@ Every integration (Sentry, Datadog, Clarity*, AWS CloudWatch) follows the same 4
 | **summarize** (`summarize_*`) | Aggregates captured data (top culprits, status/service distribution) — reuses the `capture` call when possible instead of hitting the API again |
 | **details** (`get_*_details`) | Fetches full context for a specific item (stack trace, breadcrumbs, browser/OS/geolocation context, HTTP request) |
 
-*Clarity currently only exposes the aggregated-insights tool (Clarity's public API has no "list individual sessions" endpoint equivalent to the other three).
+*Datadog currently only exposes the `fetch_datadog_error_issues` tool (Error Tracking) — not Logs, since the account has no log source configured in Datadog's onboarding.
+
+**Clarity currently only exposes the aggregated-insights tool (Clarity's public API has no "list individual sessions" endpoint equivalent to the other three).
 
 #### Anti-corruption layer
 
@@ -428,11 +432,11 @@ Each `service` keeps a `TtlCache` (per-source configurable TTL) to avoid repeate
 
 - **Overview** — KPIs from all 4 sources and Microsoft-Clarity-style widgets (cards with a per-source color accent, lists with a proportional filled bar instead of loose numbers).
 - **Issues (Sentry)** — filterable list by environment/route/date range; clicking opens a **Sentry-style** detail view: context (browser, OS, device, location, locale, timezone), HTTP request, stack trace, and a breadcrumb timeline.
-- **Logs (Datadog)** — same list + detail pattern for logs.
+- **Error Tracking (Datadog)** — list of issues grouped by error (not Logs: the account has no log source configured in Datadog's onboarding).
 - **Insights (Clarity)** — sessions, rage clicks, dead clicks, script errors, and top visited pages.
 - **Reports** — history of daily digests generated by the cron job, read from local SQLite.
 - **Chat** — natural-language conversation with Gemini, which automatically has access to every MCP tool (questions like "what happened yesterday on the checkout screen?" trigger the right tools on their own).
-- **CSV export** — issues, logs, and reports can be downloaded as a spreadsheet, replicating the same filters applied on screen.
+- **CSV export** — Sentry issues and reports can be downloaded as a spreadsheet, replicating the same filters applied on screen.
 - **Mobile-first** — lists become stacked cards on small screens and full tables on larger ones; filter forms use a 2-column grid on mobile.
 - **Accessibility** — skip link, correct `lang="pt-BR"`, `aria-current`/`aria-expanded`/`aria-live` where relevant, visible focus on every interactive element, pointer cursor on every clickable element.
 

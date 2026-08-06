@@ -1,4 +1,5 @@
 import type { ReportDocument } from './types';
+import { parseMarkdownLines } from './markdown-lines';
 
 // Import dinâmico (ver report-export-button.tsx): exceljs só entra no bundle do navegador
 // quando o usuário realmente clica em exportar, não no carregamento inicial da página.
@@ -24,7 +25,20 @@ export async function downloadAsExcel(doc: ReportDocument, filenameBase: string)
 			summarySheet.addRow([]);
 		} else if (section.kind === 'text') {
 			summarySheet.addRow([section.heading]).font = { bold: true };
-			summarySheet.addRow([section.body]);
+			// Uma linha do Markdown por célula (não o body inteiro numa célula só) — senão
+			// "## Sintoma"/"**Hipótese:**" apareciam literalmente na planilha.
+			for (const line of parseMarkdownLines(section.body)) {
+				if (line.kind === 'blank') continue;
+				if (line.kind === 'heading') {
+					summarySheet.addRow([line.text]).font = { bold: true };
+				} else if (line.kind === 'bullet') {
+					summarySheet.addRow([`•  ${line.text}`]);
+				} else if (line.kind === 'numbered') {
+					summarySheet.addRow([`${line.marker}  ${line.text}`]);
+				} else {
+					summarySheet.addRow([line.text]);
+				}
+			}
 			summarySheet.addRow([]);
 		}
 	}

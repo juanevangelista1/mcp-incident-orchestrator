@@ -9,7 +9,7 @@ const links = [
 	{ href: '/', label: 'Overview' },
 	{ href: '/issues', label: 'Sentry' },
 	{ href: '/issues/comparar', label: 'Comparar rotas' },
-	{ href: '/logs', label: 'Datadog' },
+	{ href: '/error-tracking', label: 'DataDog' },
 	{ href: '/insights', label: 'Clarity' },
 	{ href: '/insights/agendamento', label: 'Funil agendamento' },
 	{ href: '/reports', label: 'Relatórios' },
@@ -24,7 +24,7 @@ export function Nav() {
 		<nav
 			aria-label='Navegação principal'
 			className='sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80'>
-			<div className='mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-8'>
+			<div className='mx-auto flex max-w-10xl items-center justify-between px-4 py-3 sm:px-8'>
 				<Link
 					href='/'
 					className='flex items-center gap-2 font-heading text-sm font-semibold tracking-tight'>
