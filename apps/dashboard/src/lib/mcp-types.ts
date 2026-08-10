@@ -61,6 +61,41 @@ export interface DatadogErrorSummary {
 	topIssues: { label: string; count: number }[];
 }
 
+export interface DatadogErrorIssueDetails {
+	id: string;
+	errorMessage: string;
+	errorType: string;
+	service: string;
+	platform: string;
+	state: string;
+	isCrash: boolean;
+	firstSeen: string;
+	lastSeen: string;
+	filePath?: string;
+	functionName?: string;
+	languages: string[];
+	firstSeenVersion?: string;
+	lastSeenVersion?: string;
+	regression?: { regressedAt: string; resolvedAt: string };
+}
+
+export interface DatadogApmTrace {
+	id: string;
+	traceId: string;
+	spanId: string;
+	service: string;
+	resourceName: string;
+	operationName: string;
+	status: string;
+	env: string;
+	httpMethod?: string;
+	httpStatusCode?: string;
+	httpUrl?: string;
+	durationMs: number;
+	timestamp: string;
+	traceUrl: string;
+}
+
 export interface ClarityInsights {
 	totalSessions: number;
 	rageClicks: number;

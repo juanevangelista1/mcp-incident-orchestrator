@@ -10,10 +10,11 @@ const links = [
 	{ href: '/issues', label: 'Sentry' },
 	{ href: '/issues/comparar', label: 'Comparar rotas' },
 	{ href: '/error-tracking', label: 'DataDog' },
+	{ href: '/apm-traces', label: 'APM Traces' },
 	{ href: '/insights', label: 'Clarity' },
 	{ href: '/insights/agendamento', label: 'Funil agendamento' },
 	{ href: '/reports', label: 'Relatórios' },
-	{ href: '/chat', label: 'Chat' },
+	// { href: '/chat', label: 'Chat' },
 ];
 
 export function Nav() {

@@ -9,6 +9,8 @@ import { registerCountErrorsTool } from './tools/count-errors.tool.js';
 import { registerSummarizeErrorsTool } from './tools/summarize-errors.tool.js';
 import { registerErrorDetailsTool } from './tools/error-details.tool.js';
 import { registerFetchDatadogErrorIssuesTool } from './tools/fetch-datadog-error-issues.tool.js';
+import { registerDatadogErrorIssueDetailsTool } from './tools/datadog-error-issue-details.tool.js';
+import { registerFetchDatadogApmTracesTool } from './tools/fetch-datadog-apm-traces.tool.js';
 import { registerFetchClarityInsightsTool } from './tools/fetch-clarity-insights.tool.js';
 import { registerFetchClarityRegionInsightsTool } from './tools/fetch-clarity-region-insights.tool.js';
 import { registerFetchAwsLogsTool } from './tools/fetch-aws-logs.tool.js';
@@ -77,6 +79,8 @@ export function buildMcpServer(services: OrchestratorServices): McpServer {
 
 	if (services.datadog) {
 		registerFetchDatadogErrorIssuesTool(server, services.datadog);
+		registerDatadogErrorIssueDetailsTool(server, services.datadog);
+		registerFetchDatadogApmTracesTool(server, services.datadog);
 	}
 
 	if (services.clarity) {
