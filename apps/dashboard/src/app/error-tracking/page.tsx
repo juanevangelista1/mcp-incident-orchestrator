@@ -17,14 +17,20 @@ import {
 import { FilterForm } from '@/components/filter-form';
 import { PageTitle } from '@/components/page-title';
 import { Pagination, PAGE_SIZE } from '@/components/pagination';
-import { Bug } from 'lucide-react';
+import { toQueryString } from '@/lib/query-string';
+import { Bug, ArrowUpDown } from 'lucide-react';
 
 // Error Tracking agrupa erros de APM/RUM em "issues" — único produto Datadog integrado
 // aqui (Logs não é usado: a conta não tem log source configurado no onboarding do Datadog).
+type SortKey = 'service' | 'lastSeen' | 'totalCount';
+const SORT_KEYS: SortKey[] = ['service', 'lastSeen', 'totalCount'];
+
 type SearchParams = Promise<{
 	query?: string;
 	since?: string;
 	page?: string;
+	sort?: string;
+	dir?: string;
 }>;
 
 const STATE_BADGE_VARIANT: Record<string, 'destructive' | 'secondary' | 'outline'> = {
@@ -36,9 +42,11 @@ const STATE_BADGE_VARIANT: Record<string, 'destructive' | 'secondary' | 'outline
 };
 
 export default async function ErrorTrackingPage({ searchParams }: { searchParams: SearchParams }) {
-	const { query, since, page: pageParam } = await searchParams;
+	const { query, since, page: pageParam, sort, dir } = await searchParams;
 	const minutesAgo = dateToMinutesAgo(since);
 	const page = Math.max(1, Number(pageParam) || 1);
+	const sortKey: SortKey = SORT_KEYS.includes(sort as SortKey) ? (sort as SortKey) : 'totalCount';
+	const sortDir: 'asc' | 'desc' = dir === 'asc' ? 'asc' : 'desc';
 
 	let allIssues: DatadogErrorIssue[] = [];
 	let emptyMessage = 'Nenhuma issue encontrada para esse filtro.';
@@ -57,8 +65,23 @@ export default async function ErrorTrackingPage({ searchParams }: { searchParams
 		emptyMessage = 'Datadog não configurado no MCP server.';
 	}
 
-	const totalPages = Math.max(1, Math.ceil(allIssues.length / PAGE_SIZE));
-	const issues = allIssues.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+	// Ordena o conjunto inteiro antes de paginar — mesmo padrão de /issues e /apm-traces.
+	const sortedIssues = [...allIssues].sort((a, b) => {
+		let cmp: number;
+		if (sortKey === 'service') cmp = a.service.localeCompare(b.service);
+		else if (sortKey === 'lastSeen') cmp = new Date(a.lastSeen).getTime() - new Date(b.lastSeen).getTime();
+		else cmp = a.totalCount - b.totalCount;
+		return sortDir === 'asc' ? cmp : -cmp;
+	});
+
+	const totalPages = Math.max(1, Math.ceil(sortedIssues.length / PAGE_SIZE));
+	const issues = sortedIssues.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+	const sortHref = (key: SortKey) => {
+		const nextDir = sortKey === key && sortDir === 'desc' ? 'asc' : 'desc';
+		return `/error-tracking${toQueryString({ query, since, sort: key, dir: nextDir })}`;
+	};
+	const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === 'desc' ? '↓' : '↑') : '');
 
 	return (
 		<main
@@ -122,11 +145,25 @@ export default async function ErrorTrackingPage({ searchParams }: { searchParams
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>Serviço</TableHead>
+									<TableHead>
+										<Link href={sortHref('service')} className='inline-flex items-center gap-1 hover:underline'>
+											Serviço <ArrowUpDown className='size-3' /> {sortIndicator('service')}
+										</Link>
+									</TableHead>
 									<TableHead>Erro</TableHead>
 									<TableHead>Estado</TableHead>
-									<TableHead>Última ocorrência</TableHead>
-									<TableHead className='text-right'>Ocorrências</TableHead>
+									<TableHead>
+										<Link href={sortHref('lastSeen')} className='inline-flex items-center gap-1 hover:underline'>
+											Última ocorrência <ArrowUpDown className='size-3' /> {sortIndicator('lastSeen')}
+										</Link>
+									</TableHead>
+									<TableHead className='text-right'>
+										<Link
+											href={sortHref('totalCount')}
+											className='inline-flex items-center justify-end gap-1 hover:underline'>
+											Ocorrências <ArrowUpDown className='size-3' /> {sortIndicator('totalCount')}
+										</Link>
+									</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -159,7 +196,7 @@ export default async function ErrorTrackingPage({ searchParams }: { searchParams
 						page={page}
 						totalPages={totalPages}
 						basePath='/error-tracking'
-						params={{ query, since }}
+						params={{ query, since, sort: sortKey, dir: sortDir }}
 					/>
 				</>
 			)}

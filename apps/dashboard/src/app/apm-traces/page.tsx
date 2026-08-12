@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { callMcpTool } from '@/lib/mcp-client';
 import { DatadogApmTrace } from '@/lib/mcp-types';
 import { dateToMinutesAgo } from '@/lib/date-range';
@@ -9,21 +10,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { FilterForm } from '@/components/filter-form';
 import { PageTitle } from '@/components/page-title';
 import { Pagination, PAGE_SIZE } from '@/components/pagination';
-import { Route, ExternalLink } from 'lucide-react';
+import { toQueryString } from '@/lib/query-string';
+import { Route, ExternalLink, ArrowUpDown } from 'lucide-react';
 
 // APM Traces (spans com status:error) — granularidade de chamada individual, diferente do
 // Error Tracking (que agrupa erros em issues "de negócio"). Não tenta desenhar o waterfall
 // do trace aqui: cada linha linka pra visualização completa na própria UI do Datadog.
+type SortKey = 'service' | 'duration' | 'timestamp';
+const SORT_KEYS: SortKey[] = ['service', 'duration', 'timestamp'];
+
 type SearchParams = Promise<{
 	query?: string;
 	since?: string;
 	page?: string;
+	sort?: string;
+	dir?: string;
 }>;
 
 export default async function ApmTracesPage({ searchParams }: { searchParams: SearchParams }) {
-	const { query, since, page: pageParam } = await searchParams;
+	const { query, since, page: pageParam, sort, dir } = await searchParams;
 	const minutesAgo = dateToMinutesAgo(since);
 	const page = Math.max(1, Number(pageParam) || 1);
+	const sortKey: SortKey = SORT_KEYS.includes(sort as SortKey) ? (sort as SortKey) : 'timestamp';
+	const sortDir: 'asc' | 'desc' = dir === 'asc' ? 'asc' : 'desc';
 
 	let allTraces: DatadogApmTrace[] = [];
 	let emptyMessage = 'Nenhum span de erro encontrado para esse filtro.';
@@ -39,8 +48,24 @@ export default async function ApmTracesPage({ searchParams }: { searchParams: Se
 		emptyMessage = 'Datadog não configurado no MCP server.';
 	}
 
-	const totalPages = Math.max(1, Math.ceil(allTraces.length / PAGE_SIZE));
-	const traces = allTraces.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+	// Ordena o conjunto inteiro antes de paginar — senão trocar de página no meio de uma
+	// ordenação ficaria inconsistente (mesmo padrão de /issues).
+	const sortedTraces = [...allTraces].sort((a, b) => {
+		let cmp: number;
+		if (sortKey === 'service') cmp = a.service.localeCompare(b.service);
+		else if (sortKey === 'duration') cmp = a.durationMs - b.durationMs;
+		else cmp = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+		return sortDir === 'asc' ? cmp : -cmp;
+	});
+
+	const totalPages = Math.max(1, Math.ceil(sortedTraces.length / PAGE_SIZE));
+	const traces = sortedTraces.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+	const sortHref = (key: SortKey) => {
+		const nextDir = sortKey === key && sortDir === 'desc' ? 'asc' : 'desc';
+		return `/apm-traces${toQueryString({ query, since, sort: key, dir: nextDir })}`;
+	};
+	const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === 'desc' ? '↓' : '↑') : '');
 
 	return (
 		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
@@ -98,11 +123,23 @@ export default async function ApmTracesPage({ searchParams }: { searchParams: Se
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>Serviço</TableHead>
+									<TableHead>
+										<Link href={sortHref('service')} className="inline-flex items-center gap-1 hover:underline">
+											Serviço <ArrowUpDown className="size-3" /> {sortIndicator('service')}
+										</Link>
+									</TableHead>
 									<TableHead>Recurso</TableHead>
 									<TableHead>HTTP</TableHead>
-									<TableHead className="text-right">Duração</TableHead>
-									<TableHead>Timestamp</TableHead>
+									<TableHead className="text-right">
+										<Link href={sortHref('duration')} className="inline-flex items-center justify-end gap-1 hover:underline">
+											Duração <ArrowUpDown className="size-3" /> {sortIndicator('duration')}
+										</Link>
+									</TableHead>
+									<TableHead>
+										<Link href={sortHref('timestamp')} className="inline-flex items-center gap-1 hover:underline">
+											Timestamp <ArrowUpDown className="size-3" /> {sortIndicator('timestamp')}
+										</Link>
+									</TableHead>
 									<TableHead />
 								</TableRow>
 							</TableHeader>
@@ -139,7 +176,12 @@ export default async function ApmTracesPage({ searchParams }: { searchParams: Se
 						</Table>
 					</div>
 
-					<Pagination page={page} totalPages={totalPages} basePath="/apm-traces" params={{ query, since }} />
+					<Pagination
+						page={page}
+						totalPages={totalPages}
+						basePath="/apm-traces"
+						params={{ query, since, sort: sortKey, dir: sortDir }}
+					/>
 				</>
 			)}
 		</main>
