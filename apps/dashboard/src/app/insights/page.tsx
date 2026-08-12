@@ -1,6 +1,7 @@
 import { callMcpTool } from '@/lib/mcp-client';
 import { ClarityInsights } from '@/lib/mcp-types';
 import { getGa4Summary } from '@/lib/mcp-summaries';
+import { formatNumberBR } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { PaginatedMetricList } from '@/components/paginated-metric-list';
 import { ShareDonutChart } from '@/components/charts/share-donut-chart';
 import { FilterForm } from '@/components/filter-form';
 import { InsightsExport } from '@/components/insights-export';
+import { TodayDelayWarning } from '@/components/today-delay-warning';
 import { MousePointerClick } from 'lucide-react';
 
 type SearchParams = Promise<{ url?: string; device?: string; days?: string }>;
@@ -64,7 +66,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 				<PageTitle
 					icon={MousePointerClick}
 					accent="bg-sky-600/10 text-sky-600 dark:text-sky-400"
-					title="Insights — Microsoft Clarity"
+					title="Insights: Microsoft Clarity"
 					subtitle={<p className="text-muted-foreground text-sm">Últimos {numOfDays} dia(s)</p>}
 				/>
 				{data && <InsightsExport data={data} numOfDays={numOfDays} urlFilter={url} deviceFilter={device} ga4={ga4} />}
@@ -83,9 +85,13 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 			/>
 			<p className="text-muted-foreground -mt-3 text-xs">
 				Filtros fixos (não texto livre): cada combinação diferente consome uma cota da API do
-				Clarity na primeira vez (limite: 10 requisições/dia) — resultados ficam em cache por 6h
+				Clarity na primeira vez (limite: 10 requisições/dia). Resultados ficam em cache por 6h
 				depois disso.
 			</p>
+
+			{/* A janela do Clarity sempre termina "agora" (numOfDays conta pra trás a partir do
+			    momento da chamada) — hoje está sempre incluído, sem precisar checar filtro. */}
+			<TodayDelayWarning />
 
 			{!data ? (
 				<p className="text-muted-foreground text-sm">{emptyMessage}</p>
@@ -95,52 +101,52 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 						<Card size="sm" className="border-t-4 border-t-sky-500/70">
 							<CardHeader>
 								<CardDescription>Sessões</CardDescription>
-								<CardTitle className="text-2xl sm:text-3xl">{data.totalSessions}</CardTitle>
+								<CardTitle className="text-2xl sm:text-3xl">{formatNumberBR(data.totalSessions)}</CardTitle>
 							</CardHeader>
 						</Card>
 						<Card size="sm" className="border-t-4 border-t-amber-500/70">
 							<CardHeader>
 								<CardDescription>Cliques contínuos (rage)</CardDescription>
 								<CardTitle className="text-2xl sm:text-3xl">{data.rageClickPercent}%</CardTitle>
-								<p className="text-muted-foreground text-xs">{data.rageClicks} sessão(ões)</p>
+								<p className="text-muted-foreground text-xs">{formatNumberBR(data.rageClicks)} sessão(ões)</p>
 							</CardHeader>
 						</Card>
 						<Card size="sm" className="border-t-4 border-t-orange-500/70">
 							<CardHeader>
 								<CardDescription>Cliques mortos (dead)</CardDescription>
 								<CardTitle className="text-2xl sm:text-3xl">{data.deadClickPercent}%</CardTitle>
-								<p className="text-muted-foreground text-xs">{data.deadClicks} sessão(ões)</p>
+								<p className="text-muted-foreground text-xs">{formatNumberBR(data.deadClicks)} sessão(ões)</p>
 							</CardHeader>
 						</Card>
 						<Card size="sm" className="border-t-4 border-t-rose-500/70">
 							<CardHeader>
 								<CardDescription>Erros de script</CardDescription>
 								<CardTitle className="text-2xl sm:text-3xl">{data.scriptErrorPercent}%</CardTitle>
-								<p className="text-muted-foreground text-xs">{data.scriptErrors} sessão(ões)</p>
+								<p className="text-muted-foreground text-xs">{formatNumberBR(data.scriptErrors)} sessão(ões)</p>
 							</CardHeader>
 						</Card>
 						<Card size="sm" className="border-t-4 border-t-violet-500/70">
 							<CardHeader>
 								<CardDescription>Rolagem excessiva</CardDescription>
 								<CardTitle className="text-2xl sm:text-3xl">{data.excessiveScrollPercent}%</CardTitle>
-								<p className="text-muted-foreground text-xs">{data.excessiveScrollSessions} sessão(ões)</p>
+								<p className="text-muted-foreground text-xs">{formatNumberBR(data.excessiveScrollSessions)} sessão(ões)</p>
 							</CardHeader>
 						</Card>
 						<Card size="sm" className="border-t-4 border-t-indigo-500/70">
 							<CardHeader>
 								<CardDescription>Retornos rápidos</CardDescription>
 								<CardTitle className="text-2xl sm:text-3xl">{data.quickBackPercent}%</CardTitle>
-								<p className="text-muted-foreground text-xs">{data.quickBackSessions} sessão(ões)</p>
+								<p className="text-muted-foreground text-xs">{formatNumberBR(data.quickBackSessions)} sessão(ões)</p>
 							</CardHeader>
 						</Card>
 						<Card
 							size="sm"
 							className="border-t-4 border-t-slate-500/70"
-							title="Estimativa nossa (sessões com tempo ativo zerado), não é um dado oficial de detecção de bot do Clarity — a API pública dele não expõe isso."
+							title="Estimativa nossa (sessões com tempo ativo zerado), não é um dado oficial de detecção de bot do Clarity: a API pública dele não expõe isso."
 						>
 							<CardHeader>
 								<CardDescription>Baixo engajamento (estimativa)</CardDescription>
-								<CardTitle className="text-2xl sm:text-3xl">{data.lowEngagementSessions}</CardTitle>
+								<CardTitle className="text-2xl sm:text-3xl">{formatNumberBR(data.lowEngagementSessions)}</CardTitle>
 							</CardHeader>
 						</Card>
 					</section>
@@ -242,10 +248,10 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 
 			<Card className="border-t-4 border-t-teal-500/70">
 				<CardHeader>
-					<CardTitle>Conversão real — Google Analytics 4</CardTitle>
+					<CardTitle>Conversão real: Google Analytics 4</CardTitle>
 					<CardDescription>
 						Diferente do resto desta página (comportamento/proxy do Clarity), estes números são a
-						conversão REAL de um evento específico do GA4 — nunca some com sessões do Clarity.
+						conversão REAL de um evento específico do GA4. Nunca some com sessões do Clarity.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -254,17 +260,17 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 							<div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
 								<div>
 									<p className="text-muted-foreground text-xs">Sessões (GA4)</p>
-									<p className="text-xl font-semibold">{ga4.sessions}</p>
+									<p className="text-xl font-semibold">{formatNumberBR(ga4.sessions)}</p>
 								</div>
 								<div>
 									<p className="text-muted-foreground text-xs">Usuários (GA4)</p>
-									<p className="text-xl font-semibold">{ga4.totalUsers}</p>
+									<p className="text-xl font-semibold">{formatNumberBR(ga4.totalUsers)}</p>
 								</div>
 								<div>
 									<p className="text-muted-foreground text-xs">
 										Conversões{ga4.conversionEventName ? ` (${ga4.conversionEventName})` : ''}
 									</p>
-									<p className="text-xl font-semibold">{ga4.conversions ?? '—'}</p>
+									<p className="text-xl font-semibold">{ga4.conversions != null ? formatNumberBR(ga4.conversions) : '-'}</p>
 								</div>
 							</div>
 							{ga4.topPagesBySessions.length > 0 && (

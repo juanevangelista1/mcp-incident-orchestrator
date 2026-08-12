@@ -1,5 +1,7 @@
 import { listDailyReports } from '@/db/client';
 import { toDailyPoints, percentChange } from '@/lib/trends';
+import { formatDateShortBR, rangeIncludesToday } from '@/lib/date-format';
+import { TodayDelayWarning } from '@/components/today-delay-warning';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageTitle } from '@/components/page-title';
@@ -75,9 +77,11 @@ export default async function AgendamentoFunnelPage() {
 
 			<p className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
 				Não existe evento de conversão real (GA4/CRM/formulário) conectado ao projeto. Este número mede
-				apenas <strong>sessões que chegaram</strong> na URL configurada acima — um proxy de intenção, não uma
+				apenas <strong>sessões que chegaram</strong> na URL configurada acima: um proxy de intenção, não uma
 				confirmação de agendamento concluído.
 			</p>
+
+			{lastDay && rangeIncludesToday(lastDay.date) && <TodayDelayWarning />}
 
 			<Card className="border-t-4 border-t-sky-500/70">
 				<CardHeader>
@@ -87,19 +91,19 @@ export default async function AgendamentoFunnelPage() {
 					</div>
 					<CardDescription>
 						Taxa diária de chegada em agendamento (chegadas ÷ sessões totais), a partir do que o digest já
-						coletou — {daysWithBookingData} dia(s) com dado desde que o filtro foi configurado.
+						coletou. {daysWithBookingData} dia(s) com dado desde que o filtro foi configurado.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					{daysWithBookingData > 0 ? (
 						<DailyTrendChart
-							points={last14.map((p) => ({ label: p.date.slice(5), value: p.rate ? Number(p.rate.toFixed(1)) : 0 }))}
+							points={last14.map((p) => ({ label: formatDateShortBR(p.date), value: p.rate ? Number(p.rate.toFixed(1)) : 0 }))}
 							valueLabel="% de chegada"
 							color="#10b981"
 						/>
 					) : (
 						<p className="text-muted-foreground text-sm">
-							Ainda não há dias de digest com esse filtro coletado — o histórico começa a partir de
+							Ainda não há dias de digest com esse filtro coletado. O histórico começa a partir de
 							amanhã, quando o cron rodar de novo com <code>CLARITY_BOOKING_URL_PATTERN</code> já
 							configurado.
 						</p>
