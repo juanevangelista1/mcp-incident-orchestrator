@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ComparisonBarChart } from '@/components/charts/comparison-bar-chart';
+import { formatNumberBR } from '@/lib/format';
 import { Loader2, RefreshCw } from 'lucide-react';
 
 interface SnapshotData {
@@ -52,7 +53,7 @@ export function BookingSnapshot() {
 					</button>
 				</div>
 				<CardDescription>
-					Consulta 2 chamadas reais ao Clarity (limite: 10/dia) — por isso não é automático. Use com
+					Consulta 2 chamadas reais ao Clarity (limite: 10/dia), por isso não é automático. Use com
 					moderação; a tendência histórica abaixo é gratuita e não consome cota.
 				</CardDescription>
 			</CardHeader>
@@ -66,15 +67,15 @@ export function BookingSnapshot() {
 					<section className="grid grid-cols-3 gap-4">
 						<div>
 							<p className="text-muted-foreground text-xs">Sessões totais</p>
-							<p className="text-2xl font-semibold">{data.totalSessions}</p>
+							<p className="text-2xl font-semibold">{formatNumberBR(data.totalSessions)}</p>
 						</div>
 						<div>
 							<p className="text-muted-foreground text-xs">Chegaram no agendamento</p>
-							<p className="text-2xl font-semibold">{data.bookingSessions}</p>
+							<p className="text-2xl font-semibold">{formatNumberBR(data.bookingSessions)}</p>
 						</div>
 						<div>
 							<p className="text-muted-foreground text-xs">Taxa de chegada (proxy)</p>
-							<p className="text-2xl font-semibold">{data.rate !== null ? `${data.rate.toFixed(1)}%` : '—'}</p>
+							<p className="text-2xl font-semibold">{data.rate !== null ? `${data.rate.toFixed(1)}%` : '-'}</p>
 						</div>
 					</section>
 

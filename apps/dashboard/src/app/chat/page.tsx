@@ -64,10 +64,10 @@ export default function ChatPage() {
 				<PageTitle
 					icon={MessageCircle}
 					accent="bg-indigo-600/10 text-indigo-600 dark:text-indigo-400"
-					title="Chat — Orquestrador de Incidentes"
+					title="Chat: Orquestrador de Incidentes"
 					subtitle={
 						<p className="text-muted-foreground text-sm">
-							Perguntas de resposta instantânea (sem gastar cota do Gemini) — clique numa pergunta abaixo.
+							Perguntas de resposta instantânea (sem gastar cota do Gemini): clique numa pergunta abaixo.
 							Para as perguntas de causa/relação, você também pode gerar uma análise com Gemini sob demanda.
 						</p>
 					}
