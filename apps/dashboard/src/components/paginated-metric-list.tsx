@@ -60,7 +60,16 @@ export function PaginatedMetricList({
 			<div className="flex flex-col gap-1">
 				{pageItems.map((item, i) =>
 					item.href ? (
-						<Link key={`${item.label}-${i}`} href={item.href} className="block rounded-md hover:bg-accent/60">
+						// prefetch off: cada item vira uma rota dinâmica diferente (query string única),
+						// e uma lista pode ter até 25 itens — sem isso, o Next buscaria dado ao vivo de
+						// até 25 páginas só por elas terem entrado na viewport (ver prefetching.md,
+						// "Preventing too many prefetches").
+						<Link
+							key={`${item.label}-${i}`}
+							href={item.href}
+							prefetch={false}
+							className="block rounded-md hover:bg-accent/60"
+						>
 							<MetricBar label={item.label} value={item.value} max={max} barColor={barColor} />
 						</Link>
 					) : (
