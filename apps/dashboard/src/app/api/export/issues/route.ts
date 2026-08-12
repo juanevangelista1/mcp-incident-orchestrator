@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
 		route: searchParams.get('route') ?? undefined,
 		startDate: searchParams.get('startDate') ?? undefined,
 		endDate: searchParams.get('endDate') ?? undefined,
+		dateField: searchParams.get('dateField') ?? undefined,
 		search: searchParams.get('search') ?? undefined,
 		level: searchParams.get('level') ?? undefined,
 		limit: 100,

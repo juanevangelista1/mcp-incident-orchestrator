@@ -23,6 +23,12 @@ const baseIssueQuerySchema = z.object({
 		.string()
 		.optional()
 		.describe('Data final (formato AAAA-MM-DD) para filtrar erros vistos até ela. Deixe vazio para usar o momento atual.'),
+	dateField: z
+		.enum(['firstSeen', 'lastSeen'])
+		.optional()
+		.describe(
+			"Qual data o filtro startDate/endDate considera: 'lastSeen' (padrão, erro OCORREU no período, mesmo que criado antes) ou 'firstSeen' (erro APARECEU pela primeira vez no período).",
+		),
 	search: z
 		.string()
 		.optional()
@@ -56,6 +62,7 @@ export const sentryIssueSchema = z.object({
 	culprit: z.string(), // nunca é null: o service já substitui por 'Desconhecido' antes de chegar aqui
 	count: z.number(),
 	permalink: z.string().url(),
+	lastSeen: z.string(), // ISO 8601 — última vez que o erro ocorreu, usado pra ordenar "mais novo primeiro"
 });
 
 // Espelha o que a própria UI do Sentry mostra na tela de detalhe de um erro

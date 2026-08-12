@@ -15,11 +15,25 @@ import { PaginatedMetricList } from '@/components/paginated-metric-list';
 import { IssuesExport } from '@/components/issues-export';
 import { Pagination, PAGE_SIZE } from '@/components/pagination';
 import { toQueryString } from '@/lib/query-string';
+import { rangeIncludesToday } from '@/lib/date-format';
+import { formatNumberBR } from '@/lib/format';
+import { TodayDelayWarning } from '@/components/today-delay-warning';
 import { AlertTriangle, ArrowUpDown } from 'lucide-react';
 
 const SEVERITY_RANK: Record<Severity, number> = { Crítico: 4, Alto: 3, Médio: 2, Baixo: 1 };
-type SortKey = 'title' | 'severity' | 'count';
-const SORT_KEYS: SortKey[] = ['title', 'severity', 'count'];
+const SEVERITY_OPTIONS = [
+	{ value: 'Crítico', label: 'Crítico' },
+	{ value: 'Alto', label: 'Alto' },
+	{ value: 'Médio', label: 'Médio' },
+	{ value: 'Baixo', label: 'Baixo' },
+];
+type SortKey = 'title' | 'severity' | 'count' | 'lastSeen';
+const SORT_KEYS: SortKey[] = ['title', 'severity', 'count', 'lastSeen'];
+
+const DATE_FIELD_OPTIONS = [
+	{ value: 'lastSeen', label: 'Ocorreu no período' },
+	{ value: 'firstSeen', label: 'Apareceu pela primeira vez no período' },
+];
 
 const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
 
@@ -36,18 +50,22 @@ type SearchParams = Promise<{
 	route?: string;
 	startDate?: string;
 	endDate?: string;
+	dateField?: string;
 	search?: string;
 	level?: string;
+	severity?: string;
 	page?: string;
 	sort?: string;
 	dir?: string;
 }>;
 
 export default async function IssuesPage({ searchParams }: { searchParams: SearchParams }) {
-	const { environment, route, startDate, endDate, search, level, page: pageParam, sort, dir } = await searchParams;
+	const { environment, route, startDate, endDate, dateField, search, level, severity, page: pageParam, sort, dir } =
+		await searchParams;
 	const page = Math.max(1, Number(pageParam) || 1);
-	const sortKey: SortKey = SORT_KEYS.includes(sort as SortKey) ? (sort as SortKey) : 'count';
+	const sortKey: SortKey = SORT_KEYS.includes(sort as SortKey) ? (sort as SortKey) : 'lastSeen';
 	const sortDir: 'asc' | 'desc' = dir === 'asc' ? 'asc' : 'desc';
+	const effectiveDateField = dateField === 'firstSeen' ? 'firstSeen' : 'lastSeen';
 
 	let allIssues: SentryIssue[] = [];
 	let emptyMessage = 'Nenhum erro encontrado para esse filtro.';
@@ -58,6 +76,7 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 			route,
 			startDate,
 			endDate,
+			dateField: effectiveDateField,
 			search,
 			level,
 			limit: 100,
@@ -68,20 +87,26 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 		emptyMessage = `Falha ao buscar issues: ${error.message}`;
 	}
 
-	const totalPages = Math.max(1, Math.ceil(allIssues.length / PAGE_SIZE));
-	// Severidade é percentil sobre o CONJUNTO FILTRADO inteiro (allIssues), não sobre a página
-	// exibida — senão o mesmo erro mudaria de classificação só por causa da paginação.
+	// Severidade é percentil sobre o CONJUNTO FILTRADO PELO SENTRY inteiro (allIssues), antes do
+	// filtro de severidade — senão selecionar "Crítico" reduziria o próprio universo usado pra
+	// calcular o percentil, e o resultado deixaria de ser comparável com o que aparece sem filtro.
 	const rankedAll = classifySeverity(allIssues);
 	const severityById = new Map(rankedAll.map((r) => [r.id, r.severity]));
 
+	const severityFilteredIssues = severity
+		? allIssues.filter((issue) => severityById.get(issue.id) === severity)
+		: allIssues;
+	const totalPages = Math.max(1, Math.ceil(severityFilteredIssues.length / PAGE_SIZE));
+
 	// Ordena o conjunto inteiro (não só a página exibida) antes de fatiar — senão trocar de
 	// página no meio de uma ordenação por título, por exemplo, ficaria inconsistente.
-	const sortedIssues = [...allIssues].sort((a, b) => {
+	const sortedIssues = [...severityFilteredIssues].sort((a, b) => {
 		let cmp: number;
 		if (sortKey === 'title') cmp = a.title.localeCompare(b.title);
 		else if (sortKey === 'severity') {
 			cmp = SEVERITY_RANK[severityById.get(a.id) ?? 'Baixo'] - SEVERITY_RANK[severityById.get(b.id) ?? 'Baixo'];
-		} else cmp = a.count - b.count;
+		} else if (sortKey === 'lastSeen') cmp = new Date(a.lastSeen).getTime() - new Date(b.lastSeen).getTime();
+		else cmp = a.count - b.count;
 		return sortDir === 'asc' ? cmp : -cmp;
 	});
 	const issues = sortedIssues.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -102,7 +127,7 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 	// desc por padrão. Reseta pra página 1 — a página atual pode nem existir mais na nova ordem.
 	const sortHref = (key: SortKey) => {
 		const nextDir = sortKey === key && sortDir === 'desc' ? 'asc' : 'desc';
-		return `/issues${toQueryString({ environment, route, startDate, endDate, search, level, sort: key, dir: nextDir })}`;
+		return `/issues${toQueryString({ environment, route, startDate, endDate, dateField, search, level, severity, sort: key, dir: nextDir })}`;
 	};
 	const sortIndicator = (key: SortKey) => (sortKey === key ? (sortDir === 'desc' ? '↓' : '↑') : '');
 
@@ -112,7 +137,7 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 				<PageTitle
 					icon={AlertTriangle}
 					accent="bg-rose-600/10 text-rose-600 dark:text-rose-400"
-					title="Issues — Sentry"
+					title="Issues do Sentry"
 					subtitle={
 						<p className="text-muted-foreground text-sm">
 							Projeto <Badge variant="outline">{PROJECT_SLUG || 'não configurado'}</Badge>
@@ -121,33 +146,42 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 				/>
 				<div className="flex shrink-0 gap-2">
 					<a
-						href={`/api/export/issues${toQueryString({ environment, route, startDate, endDate, search, level })}`}
+						href={`/api/export/issues${toQueryString({ environment, route, startDate, endDate, dateField, search, level })}`}
 						className="focus-visible:ring-ring self-start rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
 					>
 						Baixar CSV
 					</a>
 					<IssuesExport
-						issues={allIssues}
+						issues={severityFilteredIssues}
 						rankedIssues={rankedAll}
 						pageRank={sentryPageRank}
 						clarityScriptErrors={clarityScriptErrors}
-						filters={{ environment, route, startDate, endDate, search, level }}
+						filters={{ environment, route, startDate, endDate, search, level, severity }}
 					/>
 				</div>
 			</header>
 
 			<FilterForm
 				action="/issues"
-				values={{ environment, route, startDate, endDate, search, level }}
+				values={{ environment, route, startDate, endDate, dateField: effectiveDateField, search, level, severity }}
 				fields={[
 					{ name: 'search', label: 'Busca (título/mensagem)', type: 'text', placeholder: 'TypeError' },
 					{ name: 'level', label: 'Nível', type: 'select', options: LEVEL_OPTIONS },
+					{ name: 'severity', label: 'Severidade', type: 'select', options: SEVERITY_OPTIONS },
 					{ name: 'environment', label: 'Ambiente', type: 'text', placeholder: 'production' },
 					{ name: 'route', label: 'Rota', type: 'text', placeholder: 'agendamento-visita' },
 					{ name: 'startDate', label: 'De', type: 'date' },
 					{ name: 'endDate', label: 'Até', type: 'date' },
+					{ name: 'dateField', label: 'Modo de data', type: 'select', options: DATE_FIELD_OPTIONS },
 				]}
 			/>
+			<p className="text-muted-foreground -mt-3 text-xs">
+				&quot;Ocorreu no período&quot; (padrão) mostra erros que dispararam nesse intervalo, mesmo
+				que tenham surgido antes. &quot;Apareceu pela primeira vez&quot; mostra só erros novos,
+				criados dentro do período.
+			</p>
+
+			{rangeIncludesToday(endDate) && <TodayDelayWarning />}
 
 			{issues.length === 0 ? (
 				<p className="text-muted-foreground text-sm">{emptyMessage}</p>
@@ -169,9 +203,12 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 											<Badge className={SEVERITY_BADGE_CLASS[severityById.get(issue.id) ?? 'Baixo']}>
 												{severityById.get(issue.id)}
 											</Badge>
-											<Badge variant="secondary">{issue.count}</Badge>
+											<Badge variant="secondary">{formatNumberBR(issue.count)}</Badge>
 										</div>
 									</div>
+									<span className="text-muted-foreground text-xs">
+										última vez {new Date(issue.lastSeen).toLocaleString('pt-BR')}
+									</span>
 								</CardContent>
 							</Card>
 						))}
@@ -198,6 +235,11 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 											Ocorrências <ArrowUpDown className="size-3" /> {sortIndicator('count')}
 										</Link>
 									</TableHead>
+									<TableHead>
+										<Link href={sortHref('lastSeen')} className="inline-flex items-center gap-1 hover:underline">
+											Última ocorrência <ArrowUpDown className="size-3" /> {sortIndicator('lastSeen')}
+										</Link>
+									</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -213,14 +255,17 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 										</TableCell>
 										<TableCell>
 											<Badge
-												title="Heurística por percentil de ocorrências dentro deste conjunto filtrado — não é um campo oficial do Sentry."
+												title="Heurística por percentil de ocorrências dentro deste conjunto filtrado. Não é um campo oficial do Sentry."
 												className={SEVERITY_BADGE_CLASS[severityById.get(issue.id) ?? 'Baixo']}
 											>
 												{severityById.get(issue.id)}
 											</Badge>
 										</TableCell>
 										<TableCell className="text-right">
-											<Badge variant="secondary">{issue.count}</Badge>
+											<Badge variant="secondary">{formatNumberBR(issue.count)}</Badge>
+										</TableCell>
+										<TableCell className="text-muted-foreground">
+											{new Date(issue.lastSeen).toLocaleString('pt-BR')}
 										</TableCell>
 									</TableRow>
 								))}
@@ -232,7 +277,7 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 						page={page}
 						totalPages={totalPages}
 						basePath="/issues"
-						params={{ environment, route, startDate, endDate, search, level, sort: sortKey, dir: sortDir }}
+						params={{ environment, route, startDate, endDate, dateField, search, level, severity, sort: sortKey, dir: sortDir }}
 					/>
 				</>
 			)}
@@ -243,7 +288,7 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 						<CardContent className="flex flex-col gap-3 pt-6">
 							<div className="flex items-center justify-between gap-2">
 								<div>
-									<h2 className="text-sm font-medium">Ranking por página — Sentry</h2>
+									<h2 className="text-sm font-medium">Ranking por página: Sentry</h2>
 									<p className="text-muted-foreground text-xs">Ocorrências agrupadas por rota/culprit do erro</p>
 								</div>
 								{sentryPageRank.length >= 2 && (
@@ -270,9 +315,9 @@ export default async function IssuesPage({ searchParams }: { searchParams: Searc
 					<Card>
 						<CardContent className="flex flex-col gap-3 pt-6">
 							<div>
-								<h2 className="text-sm font-medium">Ranking por página — Clarity</h2>
+								<h2 className="text-sm font-medium">Ranking por página: Clarity</h2>
 								<p className="text-muted-foreground text-xs">
-									Erros de script (JS) detectados pelo Clarity, últimos 3 dias — fonte e metodologia
+									Erros de script (JS) detectados pelo Clarity, últimos 3 dias. Fonte e metodologia
 									diferentes do Sentry, colunas nunca somadas
 								</p>
 							</div>

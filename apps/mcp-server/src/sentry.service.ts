@@ -12,6 +12,7 @@ export interface IssuesQueryParams {
 	route?: string;
 	startDate?: string;
 	endDate?: string;
+	dateField?: 'firstSeen' | 'lastSeen';
 	search?: string;
 	level?: string;
 }
@@ -66,9 +67,12 @@ export class SentryService {
 	}
 
 	// Montagem única da query de busca (sintaxe de search do Sentry), reaproveitada por
-	// fetchRecentIssues e countIssues. O filtro de data usa `firstSeen`, não `lastSeen`:
-	// queremos "erros que surgiram nesse período", que é o que um filtro de data num
-	// dashboard de incidentes normalmente significa.
+	// fetchRecentIssues e countIssues. O filtro de data usa `lastSeen` por padrão (erro OCORREU
+	// no período) — não `firstSeen` (erro APARECEU pela primeira vez no período). Testado ao
+	// vivo: filtrando por firstSeen, um erro recorrente criado há meses mas disparando todo dia
+	// sumia da lista ao pedir "últimos 7 dias", porque ele não "nasceu" nesse período — o que
+	// contraria o que a maioria espera de um filtro de data numa lista de erros. `dateField`
+	// deixa escolher `firstSeen` explicitamente pra quem quer literalmente "erros novos".
 	//
 	// IMPORTANTE: `route` NUNCA entra aqui — ver `matchesRoute` abaixo. A tag `url` do Sentry
 	// guarda a URL real resolvida (ex: `/imovel/307825/apartamento-.../`), mas todo o resto do
@@ -83,14 +87,15 @@ export class SentryService {
 	// "+" dentro do valor — não como separador — e quebra o parser com 400 Bad Request).
 	private buildIssuesQuery(params: IssuesQueryParams): string {
 		const tokens = ['is:unresolved'];
+		const dateField = params.dateField ?? 'lastSeen';
 		if (params.environment) {
 			tokens.push(`environment:${params.environment}`);
 		}
 		if (params.startDate) {
-			tokens.push(`firstSeen:>=${params.startDate}`);
+			tokens.push(`${dateField}:>=${params.startDate}`);
 		}
 		if (params.endDate) {
-			tokens.push(`firstSeen:<=${params.endDate}`);
+			tokens.push(`${dateField}:<=${params.endDate}`);
 		}
 		if (params.level) {
 			tokens.push(`level:${params.level}`);
@@ -134,6 +139,7 @@ export class SentryService {
 				culprit: issue.culprit || 'Desconhecido',
 				count: parseInt(issue.count, 10),
 				permalink: issue.permalink,
+				lastSeen: issue.lastSeen,
 			})),
 		);
 

@@ -9,6 +9,7 @@ export interface SentryIssue {
 	culprit: string;
 	count: number;
 	permalink: string;
+	lastSeen: string;
 }
 
 export interface SentryIssueDetails {
