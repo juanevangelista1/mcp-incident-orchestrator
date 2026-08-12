@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { formatDateBR } from '@/lib/date-format';
 import { ArrowUpDown } from 'lucide-react';
 import type { DailyReport } from '@/db/schema';
 
@@ -43,7 +44,7 @@ export function ReportsHistory({ reports }: { reports: DailyReport[] }) {
 				{pageItems.map((report) => (
 					<Card key={report.id}>
 						<CardHeader>
-							<CardTitle>{report.date}</CardTitle>
+							<CardTitle>{formatDateBR(report.date)}</CardTitle>
 							<CardDescription>{report.summary}</CardDescription>
 						</CardHeader>
 						<CardContent>

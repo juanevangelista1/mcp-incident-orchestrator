@@ -1,3 +1,5 @@
+import { formatNumberBR } from '@/lib/format';
+
 // Linha de métrica com barra proporcional preenchida — o padrão visual do Clarity para listas
 // como "Top Pages" (barra clara atrás do texto, comprimento proporcional ao valor máximo da
 // lista), em vez de só um número solto num Badge.
@@ -22,7 +24,7 @@ export function MetricBar({
 			<span title={title ?? label} className="relative z-10 truncate text-foreground/90">
 				{label}
 			</span>
-			<span className="relative z-10 shrink-0 font-medium tabular-nums">{value}</span>
+			<span className="relative z-10 shrink-0 font-medium tabular-nums">{formatNumberBR(value)}</span>
 		</div>
 	);
 }
