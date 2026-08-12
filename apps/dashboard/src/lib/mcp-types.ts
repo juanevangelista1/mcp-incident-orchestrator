@@ -148,4 +148,5 @@ export interface Ga4Summary {
 	conversionEventName: string | null;
 	topPagesBySessions: { page: string; sessions: number }[];
 	sessionsByDevice: { device: string; sessions: number }[];
+	eventsByName: { eventName: string; count: number }[];
 }
