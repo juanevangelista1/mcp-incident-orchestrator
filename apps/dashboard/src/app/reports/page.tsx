@@ -13,8 +13,14 @@ import { ReportsNarrativeAndExport } from '@/components/reports-narrative-and-ex
 import { ReportsHistory } from '@/components/reports-history';
 import { RouteReportNarrativeAndExport } from '@/components/route-report-narrative-and-export';
 import { PaginatedIssueList } from '@/components/paginated-issue-list';
+import { BookingEventColumn } from '@/components/booking-event-column';
 import { fetchRouteSnapshot } from '@/lib/route-snapshot';
 import { FileText, TrendingUp, TrendingDown, Microscope, Search } from 'lucide-react';
+
+// Acima disso, a taxa ocorrências÷sessões (heurística, ver route-snapshot.ts) fica destacada
+// como aviso — abaixo, é tratada como normal. Não é um SLO oficial, só um corte visual pra
+// chamar atenção sem precisar ler o número e fazer a conta de cabeça.
+const ERROR_RATE_WARNING_THRESHOLD = 5;
 
 // Lê o SQLite local a cada request — o histórico muda a cada digest novo, não deve
 // ficar preso ao snapshot do momento do build.
@@ -218,6 +224,60 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 										{routeSnapshot.ga4?.conversions != null ? formatNumberBR(routeSnapshot.ga4.conversions) : '-'}
 									</p>
 								</div>
+								<div>
+									<p className="text-muted-foreground text-xs" title="Ocorrências Sentry ÷ sessões GA4 desta rota. Heurística, não é uma taxa de erro oficial de nenhuma das duas fontes.">
+										Taxa de erro (heurística)
+									</p>
+									<p
+										className={
+											routeSnapshot.errorRatePercent !== null && routeSnapshot.errorRatePercent >= ERROR_RATE_WARNING_THRESHOLD
+												? 'text-xl font-semibold text-rose-600 dark:text-rose-400'
+												: 'text-xl font-semibold'
+										}
+									>
+										{routeSnapshot.errorRatePercent !== null ? `${routeSnapshot.errorRatePercent.toFixed(1)}%` : '-'}
+									</p>
+								</div>
+							</div>
+
+							{routeSnapshot.errorRatePercent !== null && routeSnapshot.errorRatePercent >= ERROR_RATE_WARNING_THRESHOLD && (
+								<p className="rounded-md border border-dashed border-rose-500/40 p-2 text-xs text-rose-600 dark:text-rose-400">
+									Taxa de erro alta pra essa rota ({routeSnapshot.errorRatePercent.toFixed(1)}% das sessões GA4 tiveram
+									pelo menos uma ocorrência de erro registrada) — pode valer olhar as issues abaixo mesmo se o número
+									absoluto de ocorrências parecer pequeno perto de outras rotas.
+								</p>
+							)}
+
+							<div>
+								<div className="mb-1 flex items-center justify-between gap-2">
+									<h3 className="text-xs font-medium">Agendamentos de visita nesta rota</h3>
+									{routeSnapshot.bookingEvents && (
+										<span className="text-muted-foreground text-xs">
+											{formatNumberBR(routeSnapshot.bookingEvents.total)} no total
+										</span>
+									)}
+								</div>
+								{routeSnapshot.bookingEventsRouteMismatch ? (
+									<div className="flex flex-col gap-2 rounded-md border border-dashed border-amber-500/40 p-2">
+										<p className="text-xs text-amber-600 dark:text-amber-400">
+											Nenhum evento de agendamento tem a URL desta rota, mas o site inteiro teve{' '}
+											{formatNumberBR(routeSnapshot.bookingEventsSiteWide?.total ?? 0)} no mesmo período. O fluxo de
+											agendamento provavelmente não roda numa URL própria (ex: modal sobre a página do imóvel) —
+											os números abaixo são do site inteiro, não só desta rota.
+										</p>
+										<div className="grid gap-6 sm:grid-cols-2">
+											<BookingEventColumn title="Locação (site inteiro)" items={routeSnapshot.bookingEventsSiteWide?.locacao ?? []} />
+											<BookingEventColumn title="Venda (site inteiro)" items={routeSnapshot.bookingEventsSiteWide?.venda ?? []} />
+										</div>
+									</div>
+								) : routeSnapshot.bookingEvents && routeSnapshot.bookingEvents.total > 0 ? (
+									<div className="grid gap-6 sm:grid-cols-2">
+										<BookingEventColumn title="Locação" items={routeSnapshot.bookingEvents.locacao} />
+										<BookingEventColumn title="Venda" items={routeSnapshot.bookingEvents.venda} />
+									</div>
+								) : (
+									<p className="text-muted-foreground text-xs">Nenhum evento de agendamento no período.</p>
+								)}
 							</div>
 
 							{routeBaselineNote && (

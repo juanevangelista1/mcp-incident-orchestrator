@@ -1,5 +1,6 @@
 import { callMcpTool } from '@/lib/mcp-client';
 import { SentryIssue, ClarityInsights, Ga4Summary, DatadogErrorIssue } from '@/lib/mcp-types';
+import { groupBookingEvents, type BookingEventGroups } from '@/lib/ga4-booking-events';
 
 export interface RouteSnapshot {
 	route: string;
@@ -10,6 +11,20 @@ export interface RouteSnapshot {
 	clarityError: string | null;
 	ga4: Ga4Summary | null;
 	ga4Error: string | null;
+	// Agendamentos (locação/venda) restritos às sessões desta rota (pagePath CONTAINS route,
+	// mesmo filtro do resto do snapshot).
+	bookingEvents: BookingEventGroups | null;
+	// Mesmos eventos, mas sem o filtro de pagePath — comparação pro caso do fluxo de
+	// agendamento não acontecer numa URL própria (ex: modal sobre a página do imóvel), onde
+	// `bookingEvents` filtrado pela rota digitada vem zerado mesmo tendo agendamentos reais.
+	bookingEventsSiteWide: BookingEventGroups | null;
+	// true quando o filtro por rota zera os agendamentos mas o total do site no mesmo período
+	// não é zero — sinal de que a rota digitada provavelmente não é a URL onde o evento dispara.
+	bookingEventsRouteMismatch: boolean;
+	// Ocorrências Sentry ÷ sessões GA4 da rota, em %. Heurística (não é uma taxa de erro
+	// "oficial" de nenhuma das duas fontes): serve pra notar rotas com volume de erro alto
+	// relativo ao tráfego, que um número absoluto de ocorrências sozinho não deixa óbvio.
+	errorRatePercent: number | null;
 	datadogIssues: DatadogErrorIssue[];
 	datadogError: string | null;
 }
@@ -78,6 +93,25 @@ export async function fetchRouteSnapshot(params: {
 		ga4Error = error instanceof Error ? error.message : 'GA4 indisponível.';
 	}
 
+	const bookingEvents = ga4 ? groupBookingEvents(ga4.eventsByName) : null;
+
+	// Só busca o site inteiro (sem pagePath) se a versão filtrada pela rota veio zerada — não
+	// gasta uma segunda chamada à API do GA4 à toa quando a rota já tem agendamentos normalmente.
+	let bookingEventsSiteWide: BookingEventGroups | null = null;
+	if (bookingEvents && bookingEvents.total === 0) {
+		try {
+			const siteWideResult = await callMcpTool<Ga4Summary>('fetch_ga4_summary', {
+				numOfDays: 7,
+				startDate,
+				endDate,
+			});
+			bookingEventsSiteWide = siteWideResult.data ? groupBookingEvents(siteWideResult.data.eventsByName) : null;
+		} catch {
+			// Melhor esforço só pra essa comparação — se falhar, segue sem o aviso de mismatch.
+		}
+	}
+	const bookingEventsRouteMismatch = bookingEvents?.total === 0 && (bookingEventsSiteWide?.total ?? 0) > 0;
+
 	let datadogIssues: DatadogErrorIssue[] = [];
 	let datadogError: string | null = null;
 	try {
@@ -92,5 +126,22 @@ export async function fetchRouteSnapshot(params: {
 		datadogError = error instanceof Error ? error.message : 'Datadog não configurado no MCP server.';
 	}
 
-	return { route, issues, totalOccurrences, sentryError, clarity, clarityError, ga4, ga4Error, datadogIssues, datadogError };
+	const errorRatePercent = ga4 && ga4.sessions > 0 ? (totalOccurrences / ga4.sessions) * 100 : null;
+
+	return {
+		route,
+		issues,
+		totalOccurrences,
+		sentryError,
+		clarity,
+		clarityError,
+		ga4,
+		ga4Error,
+		bookingEvents,
+		bookingEventsSiteWide,
+		bookingEventsRouteMismatch,
+		errorRatePercent,
+		datadogIssues,
+		datadogError,
+	};
 }

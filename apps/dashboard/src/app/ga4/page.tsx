@@ -2,7 +2,7 @@ import { callMcpTool } from '@/lib/mcp-client';
 import { Ga4Summary } from '@/lib/mcp-types';
 import { defaultGa4Range, formatDateBR, rangeIncludesToday } from '@/lib/date-format';
 import { formatNumberBR } from '@/lib/format';
-import { groupBookingEvents, type BookingEventItem } from '@/lib/ga4-booking-events';
+import { groupBookingEvents } from '@/lib/ga4-booking-events';
 
 export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,33 +10,8 @@ import { PageTitle } from '@/components/page-title';
 import { PaginatedMetricList } from '@/components/paginated-metric-list';
 import { Ga4Export } from '@/components/ga4-export';
 import { TodayDelayWarning } from '@/components/today-delay-warning';
+import { BookingEventColumn } from '@/components/booking-event-column';
 import { BarChart3 } from 'lucide-react';
-
-function BookingEventColumn({ title, items }: { title: string; items: BookingEventItem[] }) {
-	const subtotal = items.reduce((sum, i) => sum + i.count, 0);
-	return (
-		<div className="flex flex-col gap-2">
-			<div className="flex items-center justify-between gap-2">
-				<h3 className="text-sm font-medium">{title}</h3>
-				<span className="text-muted-foreground text-xs">{formatNumberBR(subtotal)}</span>
-			</div>
-			{items.length === 0 ? (
-				<p className="text-muted-foreground text-xs">Nenhum evento no período.</p>
-			) : (
-				<ul className="flex flex-col gap-1.5">
-					{items.map((item) => (
-						<li key={item.eventName} className="flex items-center justify-between gap-2 text-sm">
-							<span title={item.eventName} className="text-muted-foreground truncate">
-								{item.label}
-							</span>
-							<span className="shrink-0 font-medium">{formatNumberBR(item.count)}</span>
-						</li>
-					))}
-				</ul>
-			)}
-		</div>
-	);
-}
 
 function RangeLabel({ from, to }: { from: string; to: string }) {
 	return (
