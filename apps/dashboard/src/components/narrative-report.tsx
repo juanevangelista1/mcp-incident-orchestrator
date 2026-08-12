@@ -5,15 +5,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { MarkdownReport } from '@/components/markdown-report';
 import { Sparkles, Loader2, TriangleAlert } from 'lucide-react';
 
+export interface StoredNarrativeProp {
+	text: string;
+	unverifiedNumbers: string[];
+}
+
 // Gera sob demanda (não a cada carregamento da página) — cada geração é uma chamada real ao
 // Gemini, então fica atrás de um clique explícito do usuário, não automático.
 // `onGenerated` opcional: permite que um componente pai (ex: reports-narrative-and-export.tsx)
 // guarde o texto e o inclua no export em PDF/Excel — antes essa análise só existia na tela.
-export function NarrativeReport({ onGenerated }: { onGenerated?: (text: string) => void } = {}) {
-	const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-	const [report, setReport] = useState('');
+// `initialNarrative` opcional: relatório já gerado antes (persistido no SQLite, buscado pelo
+// Server Component pai) — sem isso, sair da página e voltar perdia o texto e obrigava a gerar
+// de novo, gastando cota do Gemini só pra reler o que já existia.
+export function NarrativeReport({
+	onGenerated,
+	initialNarrative,
+}: {
+	onGenerated?: (text: string) => void;
+	initialNarrative?: StoredNarrativeProp | null;
+} = {}) {
+	const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>(initialNarrative ? 'done' : 'idle');
+	const [report, setReport] = useState(initialNarrative?.text ?? '');
 	const [error, setError] = useState('');
-	const [unverifiedNumbers, setUnverifiedNumbers] = useState<string[]>([]);
+	const [unverifiedNumbers, setUnverifiedNumbers] = useState<string[]>(initialNarrative?.unverifiedNumbers ?? []);
 
 	async function generate() {
 		setState('loading');
@@ -47,12 +61,12 @@ export function NarrativeReport({ onGenerated }: { onGenerated?: (text: string) 
 						className="focus-visible:ring-ring inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
 					>
 						{state === 'loading' && <Loader2 className="size-3.5 animate-spin" />}
-						{state === 'loading' ? 'Gerando...' : 'Gerar relatório'}
+						{state === 'loading' ? 'Gerando...' : state === 'done' ? 'Gerar novamente' : 'Gerar relatório'}
 					</button>
 				</div>
 				<CardDescription>
 					Causa provável, resumo quantitativo e matriz de confiança, gerados a partir da mesma evidência
-					mostrada acima — não é chamado automaticamente.
+					mostrada acima. Não é chamado automaticamente.
 				</CardDescription>
 			</CardHeader>
 			{(state === 'done' || state === 'error') && (
@@ -64,7 +78,7 @@ export function NarrativeReport({ onGenerated }: { onGenerated?: (text: string) 
 							{unverifiedNumbers.length > 0 && (
 								<p className="mb-3 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
 									<TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-									Números citados no texto que não batem com os dados brutos — revise antes de
+									Números citados no texto que não batem com os dados brutos. Revise antes de
 									confiar: {unverifiedNumbers.join(', ')}
 								</p>
 							)}

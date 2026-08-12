@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { NarrativeReport } from '@/components/narrative-report';
+import { NarrativeReport, type StoredNarrativeProp } from '@/components/narrative-report';
 import { ReportExportButton } from '@/components/report-export-button';
 import { buildReportsReport } from '@/lib/report-export/builders';
 import type { DailyPoint, RollupRow, Baseline } from '@/lib/trends';
@@ -11,6 +11,8 @@ import type { Scenario } from '@/lib/scenarios';
 // componente cliente, porque os dois precisam compartilhar o texto gerado: sem isso, o PDF/
 // Excel nunca incluía a cadeia Sintoma->Evidência->...->Ação, só os números (o texto ficava
 // preso no estado local do NarrativeReport, que o botão de export não enxergava).
+// `initialNarrative` (buscado no SQLite pelo Server Component pai) inicializa os dois ao
+// mesmo tempo, pra reabrir a página já com relatório e export prontos, sem gastar Gemini de novo.
 export function ReportsNarrativeAndExport({
 	points,
 	weeks,
@@ -20,6 +22,7 @@ export function ReportsNarrativeAndExport({
 	bookingBaseline,
 	ga4ConversionsBaseline,
 	scenario,
+	initialNarrative,
 }: {
 	points: DailyPoint[];
 	weeks: RollupRow[];
@@ -29,12 +32,13 @@ export function ReportsNarrativeAndExport({
 	bookingBaseline: Baseline | null;
 	ga4ConversionsBaseline: Baseline | null;
 	scenario: Scenario | null;
+	initialNarrative?: StoredNarrativeProp | null;
 }) {
-	const [narrative, setNarrative] = useState<string | undefined>(undefined);
+	const [narrative, setNarrative] = useState<string | undefined>(initialNarrative?.text);
 
 	return (
 		<div className="flex flex-col gap-3">
-			<NarrativeReport onGenerated={setNarrative} />
+			<NarrativeReport onGenerated={setNarrative} initialNarrative={initialNarrative} />
 			<ReportExportButton
 				buildDocument={() =>
 					buildReportsReport({

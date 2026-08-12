@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { generateText } from 'ai';
 import { getGeminiModel, isGeminiConfigured, isGeminiMocked } from '@/lib/gemini';
 import { findUnverifiedNumbers } from '@/lib/verify-narrative';
+import { upsertNarrative } from '@/db/client';
 import type { RouteComparisonSnapshot } from '@/lib/report-export/builders';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: 'GOOGLE_GENERATIVE_AI_API_KEY não configurada no dashboard.' }, { status: 400 });
 	}
 	if (isGeminiMocked()) {
-		return NextResponse.json({ error: 'GEMINI_MOCK está ativo — desative pra gerar uma comparação de verdade.' }, { status: 400 });
+		return NextResponse.json({ error: 'GEMINI_MOCK está ativo: desative pra gerar uma comparação de verdade.' }, { status: 400 });
 	}
 
 	const { snapshotA, snapshotB }: { snapshotA: RouteComparisonSnapshot; snapshotB: RouteComparisonSnapshot } = await req.json();
@@ -85,6 +86,12 @@ ${JSON.stringify(evidence, null, 2)}`;
 	try {
 		const { text } = await generateText({ model: getGeminiModel(), prompt });
 		const unverifiedNumbers = findUnverifiedNumbers(text, evidence);
+		upsertNarrative({
+			kind: 'route_comparison',
+			key: `${snapshotA.route}|${snapshotB.route}`,
+			narrative: text,
+			unverifiedNumbers,
+		});
 		return NextResponse.json({ report: text, unverifiedNumbers });
 	} catch (error) {
 		return NextResponse.json(

@@ -4,23 +4,30 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MarkdownReport } from '@/components/markdown-report';
 import { ReportExportButton } from '@/components/report-export-button';
-import { buildRouteComparisonFullReport, type RouteComparisonSnapshot } from '@/lib/report-export/builders';
+import { buildRouteReportDocument } from '@/lib/report-export/builders';
+import type { RouteSnapshot } from '@/lib/route-snapshot';
 import type { StoredNarrativeProp } from '@/components/narrative-report';
 import { Sparkles, Loader2, TriangleAlert } from 'lucide-react';
 
-// Uma investigação só, comparando as duas rotas (não uma por card) — é uma pergunta única
-// ("por que essas duas rotas diferem?"), então um botão só, mesmo padrão sob-demanda de
-// narrative-report.tsx e issue-investigation.tsx.
-// `initialNarrative` opcional: comparação já gerada antes (persistida no SQLite, chave
-// "rotaA|rotaB") — sem isso, sair da página e voltar perdia o texto e obrigava a gerar de
-// novo, gastando cota do Gemini.
-export function RouteComparisonNarrativeAndExport({
-	snapshotA,
-	snapshotB,
+// Diagnóstico sob demanda de uma rota (não histórico agregado, não comparação) — mesmo padrão
+// de narrative-report.tsx / issue-investigation.tsx / route-comparison-narrative-and-export.tsx.
+// `initialNarrative` opcional: já gerado antes (persistido no SQLite, chave "rota|de|até") —
+// sem isso, sair da página e voltar perdia o texto e obrigava a gerar de novo.
+export function RouteReportNarrativeAndExport({
+	route,
+	from,
+	to,
+	snapshot,
+	baseline,
+	baselineNote,
 	initialNarrative,
 }: {
-	snapshotA: RouteComparisonSnapshot;
-	snapshotB: RouteComparisonSnapshot;
+	route: string;
+	from: string;
+	to: string;
+	snapshot: RouteSnapshot;
+	baseline: { ocorrenciasSentryMedia: number | null; conversoesGa4Media: number | null };
+	baselineNote?: string;
 	initialNarrative?: StoredNarrativeProp | null;
 }) {
 	const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>(initialNarrative ? 'done' : 'idle');
@@ -32,18 +39,18 @@ export function RouteComparisonNarrativeAndExport({
 		setState('loading');
 		setError('');
 		try {
-			const res = await fetch('/api/issues/comparar/narrative', {
+			const res = await fetch('/api/reports/route-narrative', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ snapshotA, snapshotB }),
+				body: JSON.stringify({ snapshot, from, to, baseline }),
 			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error ?? 'Falha ao gerar comparação.');
+			if (!res.ok) throw new Error(data.error ?? 'Falha ao gerar diagnóstico.');
 			setNarrative(data.report);
 			setUnverifiedNumbers(data.unverifiedNumbers ?? []);
 			setState('done');
 		} catch (e) {
-			setError(e instanceof Error ? e.message : 'Falha ao gerar comparação.');
+			setError(e instanceof Error ? e.message : 'Falha ao gerar diagnóstico.');
 			setState('error');
 		}
 	}
@@ -54,7 +61,7 @@ export function RouteComparisonNarrativeAndExport({
 				<div className="flex items-center justify-between gap-2">
 					<CardTitle className="flex items-center gap-2">
 						<Sparkles className="text-indigo-600 dark:text-indigo-400 size-4" />
-						Comparação completa (Gemini)
+						Diagnóstico da rota (Gemini)
 					</CardTitle>
 					<div className="flex shrink-0 gap-2">
 						<button
@@ -64,11 +71,11 @@ export function RouteComparisonNarrativeAndExport({
 							className="focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
 						>
 							{state === 'loading' && <Loader2 className="size-3.5 animate-spin" />}
-							{state === 'loading' ? 'Gerando...' : state === 'done' ? 'Gerar novamente' : 'Gerar comparação com Gemini'}
+							{state === 'loading' ? 'Gerando...' : state === 'done' ? 'Gerar novamente' : 'Gerar diagnóstico'}
 						</button>
 						<ReportExportButton
-							buildDocument={() => buildRouteComparisonFullReport({ snapshotA, snapshotB, narrative: narrative || undefined })}
-							filenameBase="comparacao-rotas-completa"
+							buildDocument={() => buildRouteReportDocument({ route, from, to, snapshot, baselineNote, narrative: narrative || undefined })}
+							filenameBase={`rota-relatorio-${route}`}
 						/>
 					</div>
 				</div>

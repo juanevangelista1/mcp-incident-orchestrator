@@ -25,7 +25,7 @@ export function detectScenario(current: DailyPoint, previous: DailyPoint | undef
 		return {
 			code: 'H',
 			label: 'Sem baseline suficiente',
-			description: 'Ainda não há um dia anterior completo para comparar — precisa de pelo menos 2 dias de digest.',
+			description: 'Ainda não há um dia anterior completo para comparar. Precisa de pelo menos 2 dias de digest.',
 			evidence: [],
 		};
 	}
@@ -58,7 +58,7 @@ export function detectScenario(current: DailyPoint, previous: DailyPoint | undef
 			code: 'A',
 			label: 'Provável causa técnica',
 			description:
-				'Erros do Sentry subiram fortemente no mesmo dia em que as chegadas na página de agendamento caíram — correlação temporal agregada, consistente com a hipótese de erro técnico afetando conversão.',
+				'Erros do Sentry subiram fortemente no mesmo dia em que as chegadas na página de agendamento caíram: correlação temporal agregada, consistente com a hipótese de erro técnico afetando conversão.',
 			evidence: baseEvidence,
 		};
 	}
@@ -68,7 +68,7 @@ export function detectScenario(current: DailyPoint, previous: DailyPoint | undef
 			code: 'G',
 			label: 'Possível erro de frontend fora do Sentry',
 			description:
-				'Erros de script capturados pelo Clarity subiram e as chegadas em agendamento caíram, mas o Sentry não registrou um pico correspondente — sinal de um problema de frontend que o Sentry pode não estar capturando (ex: erro sem instrumentação, bloqueado antes do SDK carregar).',
+				'Erros de script capturados pelo Clarity subiram e as chegadas em agendamento caíram, mas o Sentry não registrou um pico correspondente: sinal de um problema de frontend que o Sentry pode não estar capturando (ex: erro sem instrumentação, bloqueado antes do SDK carregar).',
 			evidence: baseEvidence,
 		};
 	}
@@ -78,7 +78,7 @@ export function detectScenario(current: DailyPoint, previous: DailyPoint | undef
 			code: 'B',
 			label: 'Queda por tráfego, não por erro',
 			description:
-				'Sessões totais e chegadas em agendamento caíram juntas, sem alta de erros — consistente com queda de tráfego geral (sazonalidade, marketing, etc.), não com um problema técnico específico da etapa de agendamento.',
+				'Sessões totais e chegadas em agendamento caíram juntas, sem alta de erros: consistente com queda de tráfego geral (sazonalidade, marketing, etc.), não com um problema técnico específico da etapa de agendamento.',
 			evidence: baseEvidence,
 		};
 	}
@@ -88,7 +88,7 @@ export function detectScenario(current: DailyPoint, previous: DailyPoint | undef
 			code: 'C',
 			label: 'Queda concentrada no agendamento',
 			description:
-				'Chegadas em agendamento caíram mesmo com tráfego geral estável e sem alta de erros — sugere algo específico da etapa/página de agendamento (mudança de layout, oferta, atrito), não um problema técnico geral nem queda de tráfego.',
+				'Chegadas em agendamento caíram mesmo com tráfego geral estável e sem alta de erros: sugere algo específico da etapa/página de agendamento (mudança de layout, oferta, atrito), não um problema técnico geral nem queda de tráfego.',
 			evidence: baseEvidence,
 		};
 	}
@@ -98,7 +98,7 @@ export function detectScenario(current: DailyPoint, previous: DailyPoint | undef
 			code: 'D',
 			label: 'Erros presentes sem impacto aparente no agendamento',
 			description:
-				'Houve alta de erros (Sentry e/ou Clarity), mas as chegadas em agendamento não caíram no mesmo dia — os erros existem, mas não há evidência agregada de que estejam afetando essa conversão.',
+				'Houve alta de erros (Sentry e/ou Clarity), mas as chegadas em agendamento não caíram no mesmo dia: os erros existem, mas não há evidência agregada de que estejam afetando essa conversão.',
 			evidence: baseEvidence,
 		};
 	}
@@ -115,7 +115,7 @@ export function detectScenario(current: DailyPoint, previous: DailyPoint | undef
 	return {
 		code: 'E',
 		label: 'Comportamento normal',
-		description: 'Variações dentro do esperado — nenhum limiar de erro/queda foi cruzado neste dia.',
+		description: 'Variações dentro do esperado. Nenhum limiar de erro/queda foi cruzado neste dia.',
 		evidence: baseEvidence,
 	};
 }

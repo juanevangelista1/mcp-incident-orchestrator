@@ -1,8 +1,10 @@
 import type { ReportDocument } from './types';
 import type { ClarityInsights, Ga4Summary, SentryIssue, SentryIssueDetails } from '@/lib/mcp-types';
+import type { RouteSnapshot as RouteSnapshotForReport } from '@/lib/route-snapshot';
 import type { RankedIssue, PageRankRow } from '@/lib/error-severity';
 import type { DailyPoint, RollupRow, Baseline } from '@/lib/trends';
 import type { Scenario } from '@/lib/scenarios';
+import { formatDateBR, formatMonthBR } from '@/lib/date-format';
 
 // Funções puras (sem DOM, sem fetch): recebem o que a página JÁ buscou pra se renderizar e
 // devolvem um ReportDocument neutro. Ficam separadas dos componentes cliente pra serem fáceis
@@ -43,13 +45,13 @@ export function buildInsightsReport(params: {
 	if (ga4) {
 		sections.push({
 			kind: 'kpi',
-			heading: 'Conversão real — Google Analytics 4 (não somar com o resto deste relatório)',
+			heading: 'Conversão real: Google Analytics 4 (não somar com o resto deste relatório)',
 			items: [
 				{ label: 'Sessões (GA4)', value: ga4.sessions },
 				{ label: 'Usuários (GA4)', value: ga4.totalUsers },
 				{
 					label: `Conversões${ga4.conversionEventName ? ` (${ga4.conversionEventName})` : ''}`,
-					value: ga4.conversions ?? '—',
+					value: ga4.conversions ?? '-',
 				},
 			],
 		});
@@ -95,10 +97,66 @@ export function buildInsightsReport(params: {
 	);
 
 	return {
-		title: 'Insights — Microsoft Clarity',
-		subtitle: `Últimos ${numOfDays} dia(s)${filters ? ` — ${filters}` : ''}`,
+		title: 'Insights: Microsoft Clarity',
+		subtitle: `Últimos ${numOfDays} dia(s)${filters ? ` (${filters})` : ''}`,
 		generatedAt: new Date(),
 		sections,
+	};
+}
+
+export function buildGa4Report(params: {
+	data: Ga4Summary;
+	from: string;
+	to: string;
+	pagePathFilter?: string;
+	deviceFilter?: string;
+	eventNameFilter?: string;
+}): ReportDocument {
+	const { data, from, to, pagePathFilter, deviceFilter, eventNameFilter } = params;
+	const filters = [
+		pagePathFilter && `Página: ${pagePathFilter}`,
+		deviceFilter && `Dispositivo: ${deviceFilter}`,
+		eventNameFilter && `Evento: ${eventNameFilter}`,
+	]
+		.filter(Boolean)
+		.join(' · ');
+
+	return {
+		title: 'Google Analytics 4',
+		subtitle: `${from} até ${to}${filters ? ` (${filters})` : ''}`,
+		generatedAt: new Date(),
+		sections: [
+			{
+				kind: 'kpi',
+				heading: 'Resumo',
+				items: [
+					{ label: 'Sessões', value: data.sessions },
+					{ label: 'Usuários', value: data.totalUsers },
+					{
+						label: `Conversões${data.conversionEventName ? ` (${data.conversionEventName})` : ''}`,
+						value: data.conversions ?? '-',
+					},
+				],
+			},
+			{
+				kind: 'table',
+				heading: 'Contagem de eventos',
+				headers: ['Evento', 'Contagem'],
+				rows: data.eventsByName.map((e) => [e.eventName, e.count]),
+			},
+			{
+				kind: 'table',
+				heading: 'Páginas mais visitadas (por sessões)',
+				headers: ['Página', 'Sessões'],
+				rows: data.topPagesBySessions.map((p) => [p.page, p.sessions]),
+			},
+			{
+				kind: 'table',
+				heading: 'Sessões por dispositivo',
+				headers: ['Dispositivo', 'Sessões'],
+				rows: data.sessionsByDevice.map((d) => [d.device, d.sessions]),
+			},
+		],
 	};
 }
 
@@ -116,7 +174,7 @@ export function buildIssuesReport(params: {
 		.join(' · ');
 
 	return {
-		title: 'Issues — Sentry',
+		title: 'Issues: Sentry',
 		subtitle: activeFilters || 'Sem filtros aplicados',
 		generatedAt: new Date(),
 		sections: [
@@ -137,14 +195,14 @@ export function buildIssuesReport(params: {
 			},
 			{
 				kind: 'table',
-				heading: 'Ranking por página — Sentry',
+				heading: 'Ranking por página: Sentry',
 				headers: ['Página/Culprit', 'Ocorrências'],
 				rows: pageRank.map((r) => [r.page, r.sentryOccurrences]),
 			},
 			{
 				kind: 'table',
-				heading: 'Ranking por página — Clarity (erros de script)',
-				description: 'Fonte e metodologia diferentes do Sentry — nunca somar com a tabela acima.',
+				heading: 'Ranking por página: Clarity (erros de script)',
+				description: 'Fonte e metodologia diferentes do Sentry. Nunca somar com a tabela acima.',
 				headers: ['URL', 'Erros de script'],
 				rows: clarityScriptErrors.map((p) => [p.url, p.count]),
 			},
@@ -181,7 +239,7 @@ export function buildReportsReport(params: {
 	if (scenario) {
 		sections.push({
 			kind: 'text',
-			heading: `Cenário ${scenario.code} — ${scenario.label}`,
+			heading: `Cenário ${scenario.code}: ${scenario.label}`,
 			body: `${scenario.description}\n\nEvidência: ${scenario.evidence.join(' · ')}`,
 		});
 	}
@@ -189,7 +247,7 @@ export function buildReportsReport(params: {
 	if (narrative) {
 		sections.push({
 			kind: 'text',
-			heading: 'Relatório narrativo (Gemini) — Sintoma → Evidência → Hipótese → Investigação → Correlação → Causa provável → Impacto → Ação recomendada',
+			heading: 'Relatório narrativo (Gemini): Sintoma → Evidência → Hipótese → Investigação → Correlação → Causa provável → Impacto → Ação recomendada',
 			body: narrative,
 		});
 	}
@@ -199,11 +257,11 @@ export function buildReportsReport(params: {
 		heading: `Diário (últimos ${points.length} dia(s))`,
 		headers: ['Data', 'Sessões (Clarity)', 'Ocorrências (Sentry)', 'Chegadas em agendamento (proxy)', 'Conversões (GA4, real)'],
 		rows: points.map((p) => [
-			p.date,
-			p.claritySessions ?? '—',
-			p.sentryOccurrences ?? '—',
-			p.bookingArrivals ?? '—',
-			p.ga4Conversions ?? '—',
+			formatDateBR(p.date),
+			p.claritySessions ?? '-',
+			p.sentryOccurrences ?? '-',
+			p.bookingArrivals ?? '-',
+			p.ga4Conversions ?? '-',
 		]),
 	});
 
@@ -212,7 +270,7 @@ export function buildReportsReport(params: {
 		heading: 'Semanal',
 		headers: ['Semana (segunda-feira)', 'Sessões', 'Ocorrências', 'Erros de script', 'Agendamentos (proxy)', 'Conversões (GA4, real)'],
 		rows: weeks.map((w) => [
-			w.key,
+			formatDateBR(w.key),
 			w.claritySessions,
 			w.sentryOccurrences,
 			w.clarityScriptErrors,
@@ -226,7 +284,7 @@ export function buildReportsReport(params: {
 		heading: 'Mensal',
 		headers: ['Mês', 'Sessões', 'Ocorrências', 'Erros de script', 'Agendamentos (proxy)', 'Conversões (GA4, real)'],
 		rows: months.map((m) => [
-			m.key,
+			formatMonthBR(m.key),
 			m.claritySessions,
 			m.sentryOccurrences,
 			m.clarityScriptErrors,
@@ -239,26 +297,26 @@ export function buildReportsReport(params: {
 		kind: 'kpi',
 		heading: 'Baseline (comportamento normal)',
 		items: [
-			{ label: 'Sessões — média', value: sessionsBaseline ? sessionsBaseline.avg.toFixed(0) : '—' },
-			{ label: 'Sessões — maior', value: sessionsBaseline?.max ?? '—' },
-			{ label: 'Sessões — menor', value: sessionsBaseline?.min ?? '—' },
-			{ label: 'Ocorrências — média', value: occurrencesBaseline ? occurrencesBaseline.avg.toFixed(0) : '—' },
-			{ label: 'Ocorrências — maior', value: occurrencesBaseline?.max ?? '—' },
-			{ label: 'Ocorrências — menor', value: occurrencesBaseline?.min ?? '—' },
-			{ label: 'Agendamentos (proxy) — média', value: bookingBaseline ? bookingBaseline.avg.toFixed(0) : '—' },
-			{ label: 'Agendamentos (proxy) — maior', value: bookingBaseline?.max ?? '—' },
-			{ label: 'Agendamentos (proxy) — menor', value: bookingBaseline?.min ?? '—' },
+			{ label: 'Sessões (média)', value: sessionsBaseline ? sessionsBaseline.avg.toFixed(0) : '-' },
+			{ label: 'Sessões (maior)', value: sessionsBaseline?.max ?? '-' },
+			{ label: 'Sessões (menor)', value: sessionsBaseline?.min ?? '-' },
+			{ label: 'Ocorrências (média)', value: occurrencesBaseline ? occurrencesBaseline.avg.toFixed(0) : '-' },
+			{ label: 'Ocorrências (maior)', value: occurrencesBaseline?.max ?? '-' },
+			{ label: 'Ocorrências (menor)', value: occurrencesBaseline?.min ?? '-' },
+			{ label: 'Agendamentos (proxy) (média)', value: bookingBaseline ? bookingBaseline.avg.toFixed(0) : '-' },
+			{ label: 'Agendamentos (proxy) (maior)', value: bookingBaseline?.max ?? '-' },
+			{ label: 'Agendamentos (proxy) (menor)', value: bookingBaseline?.min ?? '-' },
 			{
-				label: 'Conversões GA4 (real) — média',
-				value: ga4ConversionsBaseline ? ga4ConversionsBaseline.avg.toFixed(0) : '—',
+				label: 'Conversões GA4 (real) (média)',
+				value: ga4ConversionsBaseline ? ga4ConversionsBaseline.avg.toFixed(0) : '-',
 			},
-			{ label: 'Conversões GA4 (real) — maior', value: ga4ConversionsBaseline?.max ?? '—' },
-			{ label: 'Conversões GA4 (real) — menor', value: ga4ConversionsBaseline?.min ?? '—' },
+			{ label: 'Conversões GA4 (real) (maior)', value: ga4ConversionsBaseline?.max ?? '-' },
+			{ label: 'Conversões GA4 (real) (menor)', value: ga4ConversionsBaseline?.min ?? '-' },
 		],
 	});
 
 	return {
-		title: 'Relatórios diários — Comparativos',
+		title: 'Relatórios diários: Comparativos',
 		subtitle: `${points.length} dia(s) de histórico disponível`,
 		generatedAt: new Date(),
 		sections,
@@ -276,7 +334,7 @@ export interface ChatConversationEntry {
 // nenhum dado novo é buscado aqui.
 export function buildChatConversationReport(conversation: ChatConversationEntry[]): ReportDocument {
 	return {
-		title: 'Chat — Perguntas e respostas',
+		title: 'Chat: Perguntas e respostas',
 		subtitle: `${conversation.length} pergunta(s) respondida(s) nesta sessão`,
 		generatedAt: new Date(),
 		sections: conversation.map((entry) => ({
@@ -299,10 +357,10 @@ export function buildIssueReport(params: { details: SentryIssueDetails; narrativ
 			items: [
 				{ label: 'Mensagem', value: details.errorMessage },
 				{ label: 'ID', value: details.id },
-				{ label: 'Navegador', value: details.context.browser ?? '—' },
-				{ label: 'Sistema', value: details.context.os ?? '—' },
-				{ label: 'Dispositivo', value: details.context.device ?? '—' },
-				{ label: 'Localização', value: details.context.location ?? '—' },
+				{ label: 'Navegador', value: details.context.browser ?? '-' },
+				{ label: 'Sistema', value: details.context.os ?? '-' },
+				{ label: 'Dispositivo', value: details.context.device ?? '-' },
+				{ label: 'Localização', value: details.context.location ?? '-' },
 			],
 		},
 	];
@@ -310,7 +368,7 @@ export function buildIssueReport(params: { details: SentryIssueDetails; narrativ
 	if (narrative) {
 		sections.push({
 			kind: 'text',
-			heading: 'Investigação completa (Gemini) — Sintoma → Evidência → Hipótese → Investigação → Correlação → Causa provável → Impacto → Ação recomendada',
+			heading: 'Investigação completa (Gemini): Sintoma → Evidência → Hipótese → Investigação → Correlação → Causa provável → Impacto → Ação recomendada',
 			body: narrative,
 		});
 	}
@@ -359,10 +417,10 @@ export function buildRouteComparisonReport(params: {
 				items: [
 					{ label: 'Issues (Sentry)', value: issues.length },
 					{ label: 'Ocorrências', value: totalOccurrences },
-					{ label: 'Sessões (Clarity)', value: clarity?.totalSessions ?? '—' },
-					{ label: 'Erros de script (Clarity)', value: clarity ? `${clarity.scriptErrorPercent}%` : '—' },
-					{ label: 'Sessões (GA4, real)', value: ga4?.sessions ?? '—' },
-					{ label: 'Conversões (GA4, real)', value: ga4?.conversions ?? '—' },
+					{ label: 'Sessões (Clarity)', value: clarity?.totalSessions ?? '-' },
+					{ label: 'Erros de script (Clarity)', value: clarity ? `${clarity.scriptErrorPercent}%` : '-' },
+					{ label: 'Sessões (GA4, real)', value: ga4?.sessions ?? '-' },
+					{ label: 'Conversões (GA4, real)', value: ga4?.conversions ?? '-' },
 				],
 			},
 			{
@@ -372,6 +430,72 @@ export function buildRouteComparisonReport(params: {
 				rows: sorted.map((i) => [i.title, i.count]),
 			},
 		],
+	};
+}
+
+// Relatório de UMA rota sob demanda (não histórico do digest, não comparação) — puxa Sentry +
+// Clarity + GA4 + Datadog ao vivo pro período escolhido (ver lib/route-snapshot.ts), mais a
+// comparação com o baseline global já calculado em /reports (`baselineNote`, texto pronto —
+// quem monta a comparação é a própria página, este builder só posiciona no documento).
+export function buildRouteReportDocument(params: {
+	route: string;
+	from: string;
+	to: string;
+	snapshot: RouteSnapshotForReport;
+	baselineNote?: string;
+	narrative?: string;
+}): ReportDocument {
+	const { route, from, to, snapshot, baselineNote, narrative } = params;
+	const sorted = [...snapshot.issues].sort((a, b) => b.count - a.count);
+
+	const sections: ReportDocument['sections'] = [
+		{
+			kind: 'kpi',
+			heading: 'Resumo',
+			items: [
+				{ label: 'Issues (Sentry)', value: snapshot.issues.length },
+				{ label: 'Ocorrências (Sentry)', value: snapshot.totalOccurrences },
+				{ label: 'Sessões (Clarity)', value: snapshot.clarity?.totalSessions ?? '-' },
+				{ label: 'Erros de script (Clarity)', value: snapshot.clarity ? `${snapshot.clarity.scriptErrorPercent}%` : '-' },
+				{ label: 'Sessões (GA4, real)', value: snapshot.ga4?.sessions ?? '-' },
+				{ label: 'Conversões (GA4, real)', value: snapshot.ga4?.conversions ?? '-' },
+				{ label: 'Issues (Datadog)', value: snapshot.datadogIssues.length },
+			],
+		},
+	];
+
+	if (baselineNote) {
+		sections.push({ kind: 'text', heading: 'Discrepância vs. baseline global', body: baselineNote });
+	}
+
+	if (narrative) {
+		sections.push({
+			kind: 'text',
+			heading: 'Diagnóstico (Gemini): Sintoma → Evidência → Hipótese → Investigação → Correlação → Causa provável → Impacto → Ação recomendada',
+			body: narrative,
+		});
+	}
+
+	sections.push({
+		kind: 'table',
+		heading: 'Erros: Sentry',
+		headers: ['Título', 'Ocorrências'],
+		rows: sorted.map((i) => [i.title, i.count]),
+	});
+
+	sections.push({
+		kind: 'table',
+		heading: 'Erros: Datadog',
+		description: snapshot.datadogError ?? undefined,
+		headers: ['Serviço', 'Erro', 'Ocorrências'],
+		rows: snapshot.datadogIssues.map((i) => [i.service, `${i.errorType}: ${i.errorMessage}`, i.totalCount]),
+	});
+
+	return {
+		title: `Relatório de rota: ${route}`,
+		subtitle: `${from} até ${to} · Sentry (is:unresolved) + Clarity (proxy) + GA4 (real) + Datadog`,
+		generatedAt: new Date(),
+		sections,
 	};
 }
 
@@ -394,22 +518,22 @@ export function buildRouteComparisonFullReport(params: {
 	const { snapshotA, snapshotB, narrative } = params;
 
 	const kpiFor = (s: RouteComparisonSnapshot) => [
-		{ label: `${s.route} — Issues (Sentry)`, value: s.issues.length },
-		{ label: `${s.route} — Ocorrências`, value: s.totalOccurrences },
-		{ label: `${s.route} — Sessões (Clarity)`, value: s.clarity?.totalSessions ?? '—' },
-		{ label: `${s.route} — Sessões (GA4, real)`, value: s.ga4?.sessions ?? '—' },
-		{ label: `${s.route} — Conversões (GA4, real)`, value: s.ga4?.conversions ?? '—' },
+		{ label: `${s.route} (Issues, Sentry)`, value: s.issues.length },
+		{ label: `${s.route} (Ocorrências)`, value: s.totalOccurrences },
+		{ label: `${s.route} (Sessões, Clarity)`, value: s.clarity?.totalSessions ?? '-' },
+		{ label: `${s.route} (Sessões, GA4 real)`, value: s.ga4?.sessions ?? '-' },
+		{ label: `${s.route} (Conversões, GA4 real)`, value: s.ga4?.conversions ?? '-' },
 	];
 
 	const sections: ReportDocument['sections'] = [
-		{ kind: 'kpi', heading: 'Resumo — Rota A', items: kpiFor(snapshotA) },
-		{ kind: 'kpi', heading: 'Resumo — Rota B', items: kpiFor(snapshotB) },
+		{ kind: 'kpi', heading: 'Resumo: Rota A', items: kpiFor(snapshotA) },
+		{ kind: 'kpi', heading: 'Resumo: Rota B', items: kpiFor(snapshotB) },
 	];
 
 	if (narrative) {
 		sections.push({
 			kind: 'text',
-			heading: 'Comparação (Gemini) — Sintoma → Evidência → Hipótese → Investigação → Correlação → Causa provável → Impacto → Ação recomendada',
+			heading: 'Comparação (Gemini): Sintoma → Evidência → Hipótese → Investigação → Correlação → Causa provável → Impacto → Ação recomendada',
 			body: narrative,
 		});
 	}
@@ -417,7 +541,7 @@ export function buildRouteComparisonFullReport(params: {
 	for (const s of [snapshotA, snapshotB]) {
 		sections.push({
 			kind: 'table',
-			heading: `Erros — ${s.route}`,
+			heading: `Erros: ${s.route}`,
 			headers: ['Título', 'Ocorrências'],
 			rows: [...s.issues].sort((a, b) => b.count - a.count).map((i) => [i.title, i.count]),
 		});

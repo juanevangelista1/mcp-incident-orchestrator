@@ -1,67 +1,26 @@
 import Link from 'next/link';
-import { callMcpTool } from '@/lib/mcp-client';
-import { SentryIssue, ClarityInsights, Ga4Summary } from '@/lib/mcp-types';
+import { RouteSnapshot, fetchRouteSnapshot } from '@/lib/route-snapshot';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageTitle } from '@/components/page-title';
 import { RouteComparisonExport } from '@/components/route-comparison-export';
 import { PaginatedIssueList } from '@/components/paginated-issue-list';
 import { RouteComparisonNarrativeAndExport } from '@/components/route-comparison-narrative-and-export';
+import { getNarrative } from '@/db/client';
+import { toNarrativeProp } from '@/lib/narrative-prop';
+import { TodayDelayWarning } from '@/components/today-delay-warning';
+import { formatNumberBR } from '@/lib/format';
 import { GitCompare } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
-
 type SearchParams = Promise<{ routeA?: string; routeB?: string }>;
-
-interface RouteSnapshot {
-	route: string;
-	issues: SentryIssue[];
-	totalOccurrences: number;
-	clarity: ClarityInsights | null;
-	clarityError: string | null;
-	ga4: Ga4Summary | null;
-}
-
-// Busca Sentry (sempre) + Clarity + GA4 (melhor esforço — Clarity compartilha a mesma cota de
-// 10/dia documentada em /insights; GA4 não tem esse teto, mas depende de credenciais
-// configuradas). Se qualquer uma faltar, a comparação segue com o que tiver disponível.
-async function fetchRouteSnapshot(route: string): Promise<RouteSnapshot> {
-	const { data } = await callMcpTool<{ issues: SentryIssue[] }>('fetch_sentry_issues', {
-		projectSlug: PROJECT_SLUG,
-		route,
-		limit: 100,
-	});
-	const issues = data?.issues ?? [];
-	const totalOccurrences = issues.reduce((sum, i) => sum + i.count, 0);
-
-	let clarity: ClarityInsights | null = null;
-	let clarityError: string | null = null;
-	try {
-		const clarityResult = await callMcpTool<ClarityInsights>('fetch_clarity_insights', { numOfDays: 3, url: route });
-		clarity = clarityResult.data ?? null;
-		if (!clarity) clarityError = clarityResult.text;
-	} catch (error) {
-		clarityError = error instanceof Error ? error.message : 'Clarity indisponível.';
-	}
-
-	let ga4: Ga4Summary | null = null;
-	try {
-		const ga4Result = await callMcpTool<Ga4Summary>('fetch_ga4_summary', { numOfDays: 7, pagePath: route });
-		ga4 = ga4Result.data ?? null;
-	} catch {
-		// GA4 opcional (sem credenciais configuradas) não deve impedir o resto da comparação.
-	}
-
-	return { route, issues, totalOccurrences, clarity, clarityError, ga4 };
-}
 
 export default async function CompareRoutesPage({ searchParams }: { searchParams: SearchParams }) {
 	const { routeA, routeB } = await searchParams;
 
 	const [snapshotA, snapshotB] = await Promise.all([
-		routeA ? fetchRouteSnapshot(routeA) : Promise.resolve(null),
-		routeB ? fetchRouteSnapshot(routeB) : Promise.resolve(null),
+		routeA ? fetchRouteSnapshot({ route: routeA }) : Promise.resolve(null),
+		routeB ? fetchRouteSnapshot({ route: routeB }) : Promise.resolve(null),
 	]);
 
 	return (
@@ -106,9 +65,13 @@ export default async function CompareRoutesPage({ searchParams }: { searchParams
 				</button>
 			</form>
 
+			{/* Clarity (numOfDays) e GA4 (numOfDays) aqui sempre terminam "agora" — hoje está
+			    sempre incluído quando há pelo menos uma rota preenchida. */}
+			{(snapshotA || snapshotB) && <TodayDelayWarning />}
+
 			{!snapshotA && !snapshotB && (
 				<p className="text-muted-foreground text-sm">
-					Preencha as duas rotas acima (busca parcial, igual ao filtro de rota do Sentry — não
+					Preencha as duas rotas acima (busca parcial, igual ao filtro de rota do Sentry, não
 					precisa ser a URL inteira) para comparar.
 				</p>
 			)}
@@ -121,7 +84,11 @@ export default async function CompareRoutesPage({ searchParams }: { searchParams
 			)}
 
 			{snapshotA && snapshotB && (
-				<RouteComparisonNarrativeAndExport snapshotA={snapshotA} snapshotB={snapshotB} />
+				<RouteComparisonNarrativeAndExport
+					snapshotA={snapshotA}
+					snapshotB={snapshotB}
+					initialNarrative={toNarrativeProp(getNarrative('route_comparison', `${snapshotA.route}|${snapshotB.route}`))}
+				/>
 			)}
 		</main>
 	);
@@ -159,35 +126,50 @@ function RouteCard({ snapshot, placeholder }: { snapshot: RouteSnapshot | null; 
 				<div className="grid grid-cols-2 gap-3 text-sm">
 					<div>
 						<p className="text-muted-foreground text-xs">Issues (Sentry)</p>
-						<p className="text-xl font-semibold">{snapshot.issues.length}</p>
+						<p className="text-xl font-semibold">{formatNumberBR(snapshot.issues.length)}</p>
 					</div>
 					<div>
 						<p className="text-muted-foreground text-xs">Ocorrências</p>
-						<p className="text-xl font-semibold">{snapshot.totalOccurrences}</p>
+						<p className="text-xl font-semibold">{formatNumberBR(snapshot.totalOccurrences)}</p>
 					</div>
 					<div>
 						<p className="text-muted-foreground text-xs">Sessões (Clarity)</p>
-						<p className="text-xl font-semibold">{snapshot.clarity?.totalSessions ?? '—'}</p>
+						<p className="text-xl font-semibold">{snapshot.clarity ? formatNumberBR(snapshot.clarity.totalSessions) : '-'}</p>
 					</div>
 					<div>
 						<p className="text-muted-foreground text-xs">Erros de script (Clarity)</p>
 						<p className="text-xl font-semibold">
-							{snapshot.clarity ? `${snapshot.clarity.scriptErrorPercent}%` : '—'}
+							{snapshot.clarity ? `${snapshot.clarity.scriptErrorPercent}%` : '-'}
 						</p>
 					</div>
 					<div>
 						<p className="text-muted-foreground text-xs">Sessões (GA4, real)</p>
-						<p className="text-xl font-semibold">{snapshot.ga4?.sessions ?? '—'}</p>
+						<p className="text-xl font-semibold">{snapshot.ga4 ? formatNumberBR(snapshot.ga4.sessions) : '-'}</p>
 					</div>
 					<div>
 						<p className="text-muted-foreground text-xs">Conversões (GA4, real)</p>
-						<p className="text-xl font-semibold">{snapshot.ga4?.conversions ?? '—'}</p>
+						<p className="text-xl font-semibold">{snapshot.ga4?.conversions != null ? formatNumberBR(snapshot.ga4.conversions) : '-'}</p>
 					</div>
 				</div>
 
+				{snapshot.sentryError && (
+					<p className="rounded-md border border-dashed border-rose-500/40 p-2 text-xs text-rose-600 dark:text-rose-400">
+						Sentry: {snapshot.sentryError}
+					</p>
+				)}
 				{snapshot.clarityError && (
 					<p className="text-muted-foreground rounded-md border border-dashed p-2 text-xs">
 						Clarity: {snapshot.clarityError}
+					</p>
+				)}
+				{snapshot.ga4Error && (
+					<p className="text-muted-foreground rounded-md border border-dashed p-2 text-xs">
+						GA4: {snapshot.ga4Error}
+					</p>
+				)}
+				{snapshot.datadogError && (
+					<p className="text-muted-foreground rounded-md border border-dashed p-2 text-xs">
+						Datadog: {snapshot.datadogError}
 					</p>
 				)}
 

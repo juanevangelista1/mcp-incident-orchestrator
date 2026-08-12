@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { callMcpTool } from '@/lib/mcp-client';
 import { SentryIssueDetails } from '@/lib/mcp-types';
+import { getNarrative } from '@/db/client';
+import { toNarrativeProp } from '@/lib/narrative-prop';
 
 export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +36,11 @@ export default async function IssueDetailsPage({ params }: { params: Promise<{ i
 						<p className="text-muted-foreground text-sm">ID: {data.id}</p>
 					</header>
 
-					<IssueInvestigationAndExport issueId={id} details={data} />
+					<IssueInvestigationAndExport
+						issueId={id}
+						details={data}
+						initialNarrative={toNarrativeProp(getNarrative('issue', id))}
+					/>
 
 					{/* Contexto (browser/OS/device/localização) — mesmo painel que a própria UI do Sentry
 					    mostra ao lado do gráfico de eventos. */}

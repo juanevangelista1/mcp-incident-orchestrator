@@ -42,3 +42,29 @@ export interface NewDailyReport {
 	rawData: string;
 	createdAt: string;
 }
+
+// Cache dos relatórios/investigações gerados pelo Gemini (Sintoma → Evidência → ... →
+// Ação recomendada) — antes só viviam em `useState` do componente cliente, então saíam da
+// tela e sumiam ao navegar pra outra página, obrigando a gerar de novo (gastando cota do
+// Gemini) só pra reler o que já tinha sido gerado. `kind` distingue os 3 lugares que geram
+// narrativa (relatório de período, investigação de issue, comparação de rotas); `key` é o
+// identificador de cada um dentro do seu kind (data do digest, ID da issue, ou "rotaA|rotaB").
+export const CREATE_NARRATIVES_TABLE = `
+CREATE TABLE IF NOT EXISTS narratives (
+	kind TEXT NOT NULL,
+	key TEXT NOT NULL,
+	narrative TEXT NOT NULL,
+	unverified_numbers TEXT NOT NULL,
+	created_at TEXT NOT NULL,
+	PRIMARY KEY (kind, key)
+)`;
+
+export type NarrativeKind = 'period' | 'issue' | 'route_comparison' | 'route_report';
+
+export interface StoredNarrative {
+	kind: NarrativeKind;
+	key: string;
+	narrative: string;
+	unverifiedNumbers: string[];
+	createdAt: string;
+}

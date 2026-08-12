@@ -3,7 +3,7 @@ import { generateText } from 'ai';
 import { callMcpTool } from '@/lib/mcp-client';
 import { SentryIssue, SentryIssueDetails } from '@/lib/mcp-types';
 import { classifySeverity } from '@/lib/error-severity';
-import { listDailyReports } from '@/db/client';
+import { listDailyReports, upsertNarrative } from '@/db/client';
 import { toDailyPoints, percentChange } from '@/lib/trends';
 import { detectScenario } from '@/lib/scenarios';
 import { getGeminiModel, isGeminiConfigured, isGeminiMocked } from '@/lib/gemini';
@@ -23,7 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 		return NextResponse.json({ error: 'GOOGLE_GENERATIVE_AI_API_KEY não configurada no dashboard.' }, { status: 400 });
 	}
 	if (isGeminiMocked()) {
-		return NextResponse.json({ error: 'GEMINI_MOCK está ativo — desative pra gerar uma investigação de verdade.' }, { status: 400 });
+		return NextResponse.json({ error: 'GEMINI_MOCK está ativo: desative pra gerar uma investigação de verdade.' }, { status: 400 });
 	}
 
 	const { id } = await params;
@@ -130,6 +130,7 @@ ${details.stackTrace.join('\n')}`;
 	try {
 		const { text } = await generateText({ model: getGeminiModel(), prompt });
 		const unverifiedNumbers = findUnverifiedNumbers(text, evidence);
+		upsertNarrative({ kind: 'issue', key: id, narrative: text, unverifiedNumbers });
 		return NextResponse.json({ report: text, unverifiedNumbers });
 	} catch (error) {
 		return NextResponse.json(

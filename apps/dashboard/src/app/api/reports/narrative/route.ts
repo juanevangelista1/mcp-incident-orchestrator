@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateText } from 'ai';
-import { listDailyReports } from '@/db/client';
+import { listDailyReports, upsertNarrative } from '@/db/client';
 import { toDailyPoints, baseline, percentChange } from '@/lib/trends';
 import { detectScenario } from '@/lib/scenarios';
 import { getGeminiModel, isGeminiConfigured, isGeminiMocked } from '@/lib/gemini';
@@ -25,14 +25,14 @@ export async function POST() {
 	}
 	if (isGeminiMocked()) {
 		return NextResponse.json(
-			{ error: 'GEMINI_MOCK está ativo — desative pra gerar um relatório de verdade.' },
+			{ error: 'GEMINI_MOCK está ativo: desative pra gerar um relatório de verdade.' },
 			{ status: 400 },
 		);
 	}
 
 	const points = toDailyPoints(listDailyReports());
 	if (points.length === 0) {
-		return NextResponse.json({ error: 'Nenhum digest gerado ainda — nada para analisar.' }, { status: 400 });
+		return NextResponse.json({ error: 'Nenhum digest gerado ainda: nada para analisar.' }, { status: 400 });
 	}
 
 	const lastDay = points.at(-1)!;
@@ -119,6 +119,7 @@ ${JSON.stringify(evidence, null, 2)}`;
 	try {
 		const { text } = await generateText({ model: getGeminiModel(), prompt });
 		const unverifiedNumbers = findUnverifiedNumbers(text, evidence);
+		upsertNarrative({ kind: 'period', key: lastDay.date, narrative: text, unverifiedNumbers });
 		return NextResponse.json({ report: text, unverifiedNumbers });
 	} catch (error) {
 		return NextResponse.json(

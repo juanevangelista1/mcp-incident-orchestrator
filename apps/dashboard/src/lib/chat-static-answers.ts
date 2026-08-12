@@ -89,7 +89,7 @@ export function buildStaticAnswers(ctx: StaticAnswersContext): StaticAnswer[] {
 			id: 'paginas-mais-acessadas',
 			question: 'Quais as páginas mais acessadas?',
 			answer: clarity?.topPages.length
-				? clarity.topPages.map((p, i) => `${i + 1}. ${p.url} — ${p.sessions} sessão(ões)`).join('\n')
+				? clarity.topPages.map((p, i) => `${i + 1}. ${p.url}: ${p.sessions} sessão(ões)`).join('\n')
 				: NO_DATA,
 			link: { href: '/insights', label: 'Ver Insights (Clarity)' },
 		},
@@ -143,15 +143,15 @@ export function buildStaticAnswers(ctx: StaticAnswersContext): StaticAnswer[] {
 			id: 'comparacao-periodo-anterior',
 			question: 'Como estamos em relação ao período anterior?',
 			answer:
-				`Dia anterior — Sessões: ${fmtPercent(percentChange(lastDay?.claritySessions ?? null, prevDay?.claritySessions ?? null))}, ` +
+				`Dia anterior, Sessões: ${fmtPercent(percentChange(lastDay?.claritySessions ?? null, prevDay?.claritySessions ?? null))}, ` +
 				`Erros: ${fmtPercent(percentChange(lastDay?.sentryOccurrences ?? null, prevDay?.sentryOccurrences ?? null))}, ` +
 				`Agendamento (proxy): ${fmtPercent(percentChange(lastDay?.bookingArrivals ?? null, prevDay?.bookingArrivals ?? null))}, ` +
 				`Conversões GA4 (real): ${fmtPercent(percentChange(lastDay?.ga4Conversions ?? null, prevDay?.ga4Conversions ?? null))}` +
 				(lastWeek && prevWeek
-					? `\nSemana anterior — Sessões: ${fmtPercent(percentChange(lastWeek.claritySessions, prevWeek.claritySessions))}`
+					? `\nSemana anterior, Sessões: ${fmtPercent(percentChange(lastWeek.claritySessions, prevWeek.claritySessions))}`
 					: '') +
 				(lastMonth && prevMonth
-					? `\nMês anterior — Sessões: ${fmtPercent(percentChange(lastMonth.claritySessions, prevMonth.claritySessions))}`
+					? `\nMês anterior, Sessões: ${fmtPercent(percentChange(lastMonth.claritySessions, prevMonth.claritySessions))}`
 					: ''),
 			link: { href: '/reports', label: 'Ver comparativos' },
 		},
@@ -167,7 +167,7 @@ export function buildStaticAnswers(ctx: StaticAnswersContext): StaticAnswer[] {
 			id: 'erros-mais-criticos',
 			question: 'Quais os erros mais críticos agora?',
 			answer: critical.length
-				? critical.map((i, idx) => `${idx + 1}. ${i.title} (${i.count} ocorrências) — /issues/${i.id}`).join('\n')
+				? critical.map((i, idx) => `${idx + 1}. ${i.title} (${i.count} ocorrências) · /issues/${i.id}`).join('\n')
 				: 'Nenhum erro classificado como Crítico no conjunto atual.',
 			link: { href: '/issues', label: 'Ver todas as issues' },
 		},
@@ -175,7 +175,7 @@ export function buildStaticAnswers(ctx: StaticAnswersContext): StaticAnswer[] {
 			id: 'paginas-com-problema',
 			question: 'Quais páginas têm mais problema?',
 			answer: pageRank.length
-				? pageRank.map((r, i) => `${i + 1}. ${r.page} — ${r.sentryOccurrences} ocorrência(s)`).join('\n')
+				? pageRank.map((r, i) => `${i + 1}. ${r.page}: ${r.sentryOccurrences} ocorrência(s)`).join('\n')
 				: NO_DATA,
 			link: { href: '/issues/comparar', label: 'Comparar rotas' },
 		},
@@ -192,7 +192,7 @@ export function buildStaticAnswers(ctx: StaticAnswersContext): StaticAnswer[] {
 			id: 'relacao-erro-conversao',
 			question: 'Existe relação entre os erros e a conversão?',
 			answer: scenario
-				? `Cenário ${scenario.code} — ${scenario.label}. ${scenario.description} Evidência: ${scenario.evidence.join(' · ') || NO_DATA}.`
+				? `Cenário ${scenario.code}: ${scenario.label}. ${scenario.description} Evidência: ${scenario.evidence.join(' · ') || NO_DATA}.`
 				: `Sem baseline suficiente ainda (precisa de pelo menos 2 dias de digest).`,
 			narrativeCapable: true,
 		},
@@ -214,7 +214,7 @@ export function buildStaticAnswers(ctx: StaticAnswersContext): StaticAnswer[] {
 			question: 'O que devemos monitorar daqui pra frente?',
 			answer: scenario
 				? `Com base no cenário atual (${scenario.label}), monitore as mesmas métricas que sustentam essa classificação: ${scenario.evidence.map((e) => e.split(':')[0]).join(', ')}. Para uma recomendação mais específica, gere a análise com Gemini abaixo.`
-				: 'Ainda não há cenário suficiente para recomendar — acompanhe sessões, erros e conversões por mais alguns dias.',
+				: 'Ainda não há cenário suficiente para recomendar. Acompanhe sessões, erros e conversões por mais alguns dias.',
 			narrativeCapable: true,
 		},
 	];
