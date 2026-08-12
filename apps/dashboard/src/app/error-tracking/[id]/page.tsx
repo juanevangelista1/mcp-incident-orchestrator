@@ -22,7 +22,7 @@ export default async function ErrorTrackingDetailsPage({ params }: { params: Pro
 
 	return (
 		<main id="main-content" className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-8">
-			<Link href="/error-tracking" className="text-muted-foreground text-sm hover:underline">
+			<Link href="/datadog?view=errors" className="text-muted-foreground text-sm hover:underline">
 				← Voltar para Error Tracking
 			</Link>
 

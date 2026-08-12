@@ -9,10 +9,10 @@ const links = [
 	{ href: '/', label: 'Overview' },
 	{ href: '/issues', label: 'Sentry' },
 	{ href: '/issues/comparar', label: 'Comparar rotas' },
-	{ href: '/error-tracking', label: 'DataDog' },
-	{ href: '/apm-traces', label: 'APM Traces' },
+	{ href: '/datadog', label: 'DataDog' },
 	{ href: '/insights', label: 'Clarity' },
 	{ href: '/insights/agendamento', label: 'Funil agendamento' },
+	{ href: '/ga4', label: 'GA4' },
 	{ href: '/reports', label: 'Relatórios' },
 	// { href: '/chat', label: 'Chat' },
 ];
