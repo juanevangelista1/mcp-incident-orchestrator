@@ -67,12 +67,22 @@ export class SentryService {
 	}
 
 	// Montagem única da query de busca (sintaxe de search do Sentry), reaproveitada por
-	// fetchRecentIssues e countIssues. O filtro de data usa `lastSeen` por padrão (erro OCORREU
-	// no período) — não `firstSeen` (erro APARECEU pela primeira vez no período). Testado ao
-	// vivo: filtrando por firstSeen, um erro recorrente criado há meses mas disparando todo dia
-	// sumia da lista ao pedir "últimos 7 dias", porque ele não "nasceu" nesse período — o que
-	// contraria o que a maioria espera de um filtro de data numa lista de erros. `dateField`
-	// deixa escolher `firstSeen` explicitamente pra quem quer literalmente "erros novos".
+	// fetchRecentIssues e countIssues.
+	//
+	// IMPORTANTE sobre data: um Issue no Sentry é um agregado (um grupo de eventos), não um
+	// evento único — `lastSeen` é a última ocorrência de TODOS OS TEMPOS daquele grupo. Um erro
+	// recorrente que ainda está disparando hoje sempre tem `lastSeen` ~agora, então filtrar
+	// `lastSeen:<=endDate` com um endDate no passado exclui esse erro mesmo que ele tenha
+	// ocorrido naquele período também — o endpoint de issues por PROJETO
+	// (`/projects/{org}/{project}/issues/`) só aceita filtrar data via esses tokens de
+	// metadado do agregado, não por "teve evento nessa janela". Por isso, pro modo padrão
+	// ("erro ocorreu no período"), usamos o endpoint por ORGANIZAÇÃO
+	// (`/organizations/{org}/issues/`), que aceita `start`/`end` como parâmetros de verdade
+	// (não tokens da query) — a mesma janela de tempo que a própria UI do Sentry usa no
+	// seletor de datas do stream de issues, filtrando por evento dentro da janela, não pelo
+	// lastSeen agregado. `dateField: 'firstSeen'` continua usando o token de metadado
+	// (`firstSeen:>=/<=`), porque aí a pergunta É sobre o agregado ("quando esse grupo nasceu"),
+	// não sobre uma janela de eventos.
 	//
 	// IMPORTANTE: `route` NUNCA entra aqui — ver `matchesRoute` abaixo. A tag `url` do Sentry
 	// guarda a URL real resolvida (ex: `/imovel/307825/apartamento-.../`), mas todo o resto do
@@ -87,15 +97,12 @@ export class SentryService {
 	// "+" dentro do valor — não como separador — e quebra o parser com 400 Bad Request).
 	private buildIssuesQuery(params: IssuesQueryParams): string {
 		const tokens = ['is:unresolved'];
-		const dateField = params.dateField ?? 'lastSeen';
 		if (params.environment) {
 			tokens.push(`environment:${params.environment}`);
 		}
-		if (params.startDate) {
-			tokens.push(`${dateField}:>=${params.startDate}`);
-		}
-		if (params.endDate) {
-			tokens.push(`${dateField}:<=${params.endDate}`);
+		if (params.dateField === 'firstSeen') {
+			if (params.startDate) tokens.push(`firstSeen:>=${params.startDate}`);
+			if (params.endDate) tokens.push(`firstSeen:<=${params.endDate}`);
 		}
 		if (params.level) {
 			tokens.push(`level:${params.level}`);
@@ -106,6 +113,17 @@ export class SentryService {
 			tokens.push(params.search.includes(' ') ? `"${params.search}"` : params.search);
 		}
 		return tokens.join(' ');
+	}
+
+	// `start`/`end` do endpoint por organização exigem ISO-8601 completo — um AAAA-MM-DD puro
+	// (o formato do <input type="date"> do dashboard) é interpretado à meia-noite UTC, o que
+	// cortaria o próprio dia de `endDate` fora da janela; por isso fixamos o fim do dia nele.
+	private dateWindow(params: IssuesQueryParams): { start?: string; end?: string } {
+		if (params.dateField === 'firstSeen') return {};
+		return {
+			start: params.startDate ? `${params.startDate}T00:00:00.000Z` : undefined,
+			end: params.endDate ? `${params.endDate}T23:59:59.999Z` : undefined,
+		};
 	}
 
 	private matchesRoute(issue: SentryIssue, route: string): boolean {
@@ -119,10 +137,19 @@ export class SentryService {
 		limit: number,
 	): Promise<SentryIssue[]> {
 		const query = this.buildIssuesQuery(params);
+		const { start, end } = this.dateWindow(params);
 
-		// A query precisa ser URL-encoded: o wildcard "*" e caracteres com acento (ex: "visita")
-		// quebrariam a URL se fossem colados sem escapar.
-		const url = `https://sentry.io/api/0/projects/${this.organizationSlug}/${projectSlug}/issues/?query=${encodeURIComponent(query)}&limit=${limit}`;
+		// Endpoint por ORGANIZAÇÃO (não por projeto) — é o único que aceita `start`/`end` como
+		// janela de tempo de verdade (evento dentro do período), em vez de só os tokens de
+		// metadado do agregado (`firstSeen`/`lastSeen`) que o endpoint por projeto aceitava.
+		// `project` filtra pro projeto certo (aceita slug), substituindo o path
+		// /projects/{org}/{project}/ de antes. A query e as datas precisam ser URL-encoded: o
+		// wildcard "*", acentos (ex: "visita") e o "T"/":" do ISO-8601 quebrariam a URL crus.
+		const url =
+			`https://sentry.io/api/0/organizations/${this.organizationSlug}/issues/` +
+			`?project=${encodeURIComponent(projectSlug)}&query=${encodeURIComponent(query)}&limit=${limit}` +
+			(start ? `&start=${encodeURIComponent(start)}` : '') +
+			(end ? `&end=${encodeURIComponent(end)}` : '');
 
 		const response = await fetch(url, { headers: this.authHeaders() });
 		await this.assertOk(response, `buscar os erros do projeto '${projectSlug}'`);
@@ -175,8 +202,12 @@ export class SentryService {
 
 		const projectId = await this.resolveProjectId(projectSlug);
 		const query = this.buildIssuesQuery(params);
+		const { start, end } = this.dateWindow(params);
 
-		const url = `https://sentry.io/api/0/organizations/${this.organizationSlug}/issues-count/?project=${projectId}&query=${encodeURIComponent(query)}`;
+		const url =
+			`https://sentry.io/api/0/organizations/${this.organizationSlug}/issues-count/?project=${projectId}&query=${encodeURIComponent(query)}` +
+			(start ? `&start=${encodeURIComponent(start)}` : '') +
+			(end ? `&end=${encodeURIComponent(end)}` : '');
 		const response = await fetch(url, { headers: this.authHeaders() });
 		await this.assertOk(response, `contar os erros do projeto '${projectSlug}'`);
 
