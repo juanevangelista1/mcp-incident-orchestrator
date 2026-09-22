@@ -104,6 +104,14 @@ export class SentryService {
 			if (params.startDate) tokens.push(`firstSeen:>=${params.startDate}`);
 			if (params.endDate) tokens.push(`firstSeen:<=${params.endDate}`);
 		}
+		// Removido (era o comportamento padrão antes desta versão, quando `dateField` defaultava
+		// pra 'lastSeen'): filtrar por token de query em vez de `start`/`end` reais.
+		//   if (params.startDate) tokens.push(`lastSeen:>=${params.startDate}`);
+		//   if (params.endDate) tokens.push(`lastSeen:<=${params.endDate}`);
+		// Motivo da remoção: ver o comentário grande acima de `buildIssuesQuery` — `lastSeen` é
+		// a última ocorrência de TODOS OS TEMPOS do agregado, não um evento dentro da janela, e
+		// por isso essa filtragem excluía erros recorrentes que na verdade ocorreram no período.
+		// Substituído por `dateWindow()` + `start`/`end` no endpoint por organização (abaixo).
 		if (params.level) {
 			tokens.push(`level:${params.level}`);
 		}

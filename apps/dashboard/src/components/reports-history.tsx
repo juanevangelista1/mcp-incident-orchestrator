@@ -49,7 +49,7 @@ export function ReportsHistory({ reports }: { reports: DailyReport[] }) {
 						</CardHeader>
 						<CardContent>
 							<div className="flex flex-wrap gap-2 text-sm">
-								<Badge className="bg-rose-600/10 text-rose-600 dark:text-rose-400">Sentry: {report.sentryCount}</Badge>
+								{/* <Badge className="bg-rose-600/10 text-rose-600 dark:text-rose-400">Sentry: {report.sentryCount}</Badge> */}
 								<Badge className="bg-violet-600/10 text-violet-600 dark:text-violet-400">
 									Datadog: {report.datadogCount ?? 'indisponível'}
 								</Badge>

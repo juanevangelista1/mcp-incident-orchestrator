@@ -194,6 +194,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 							{rangeIncludesToday(to) && <TodayDelayWarning />}
 
 							<div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+								{/* Sentry temporariamente fora do relatório por rota.
 								<div>
 									<p className="text-muted-foreground text-xs">Issues (Sentry)</p>
 									<p className="text-xl font-semibold">{formatNumberBR(routeSnapshot.issues.length)}</p>
@@ -202,6 +203,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 									<p className="text-muted-foreground text-xs">Ocorrências (Sentry)</p>
 									<p className="text-xl font-semibold">{formatNumberBR(routeSnapshot.totalOccurrences)}</p>
 								</div>
+								*/}
 								<div>
 									<p className="text-muted-foreground text-xs">Issues (Datadog)</p>
 									<p className="text-xl font-semibold">{formatNumberBR(routeSnapshot.datadogIssues.length)}</p>
@@ -224,6 +226,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 										{routeSnapshot.ga4?.conversions != null ? formatNumberBR(routeSnapshot.ga4.conversions) : '-'}
 									</p>
 								</div>
+								{/* Sentry temporariamente fora do relatório por rota (taxa deriva de ocorrências Sentry).
 								<div>
 									<p className="text-muted-foreground text-xs" title="Ocorrências Sentry ÷ sessões GA4 desta rota. Heurística, não é uma taxa de erro oficial de nenhuma das duas fontes.">
 										Taxa de erro (heurística)
@@ -238,8 +241,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 										{routeSnapshot.errorRatePercent !== null ? `${routeSnapshot.errorRatePercent.toFixed(1)}%` : '-'}
 									</p>
 								</div>
+								*/}
 							</div>
 
+							{/*
 							{routeSnapshot.errorRatePercent !== null && routeSnapshot.errorRatePercent >= ERROR_RATE_WARNING_THRESHOLD && (
 								<p className="rounded-md border border-dashed border-rose-500/40 p-2 text-xs text-rose-600 dark:text-rose-400">
 									Taxa de erro alta pra essa rota ({routeSnapshot.errorRatePercent.toFixed(1)}% das sessões GA4 tiveram
@@ -247,6 +252,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 									absoluto de ocorrências parecer pequeno perto de outras rotas.
 								</p>
 							)}
+							*/}
 
 							<div>
 								<div className="mb-1 flex items-center justify-between gap-2">
@@ -286,11 +292,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 								</p>
 							)}
 
+							{/*
 							{routeSnapshot.sentryError && (
 								<p className="rounded-md border border-dashed border-rose-500/40 p-2 text-xs text-rose-600 dark:text-rose-400">
 									Sentry: {routeSnapshot.sentryError}
 								</p>
 							)}
+							*/}
 							{routeSnapshot.clarityError && (
 								<p className="text-muted-foreground rounded-md border border-dashed p-2 text-xs">
 									Clarity: {routeSnapshot.clarityError} (a API só aceita 1–3 dias por chamada)
@@ -307,10 +315,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 								</p>
 							)}
 
+							{/* Sentry temporariamente fora do relatório por rota.
 							<div>
 								<h3 className="mb-1 text-xs font-medium">Erros desta rota (Sentry)</h3>
 								<PaginatedIssueList issues={routeSnapshot.issues} />
 							</div>
+							*/}
 
 							<RouteReportNarrativeAndExport
 								route={route!}
@@ -392,6 +402,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 						</CardContent>
 					</Card>
 
+					{/* Sentry temporariamente fora do histórico diário.
 					<Card className="border-t-4 border-t-rose-500/70">
 						<CardHeader>
 							<div className="flex items-center justify-between gap-2">
@@ -410,6 +421,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 							/>
 						</CardContent>
 					</Card>
+					*/}
 
 					<Card className="border-t-4 border-t-emerald-500/70">
 						<CardHeader>
@@ -559,6 +571,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 										<p className="text-muted-foreground">sem dado suficiente</p>
 									)}
 								</div>
+								{/* Sentry temporariamente fora do baseline.
 								<div>
 									<p className="text-muted-foreground mb-1 text-xs">Ocorrências de erro (Sentry)</p>
 									{occurrencesBaseline ? (
@@ -570,6 +583,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 										<p className="text-muted-foreground">sem dado suficiente</p>
 									)}
 								</div>
+								*/}
 								<div>
 									<p className="text-muted-foreground mb-1 text-xs">Chegadas em agendamento (proxy)</p>
 									{bookingBaseline ? (

@@ -1,10 +1,21 @@
 import Link from 'next/link';
-import { getSentrySummary, getDatadogErrorSummary, getClarityInsights, getGa4Summary } from '@/lib/mcp-summaries';
+// getSentrySummary: fora de uso enquanto o Sentry está escondido da Overview (ver abaixo).
+import {
+	/* getSentrySummary, */ getDatadogErrorSummary,
+	getClarityInsights,
+	getGa4Summary,
+} from '@/lib/mcp-summaries';
 import { formatNumberBR } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PaginatedMetricList } from '@/components/paginated-metric-list';
-import { AlertTriangle, Bug, MousePointerClick, Users, BarChart3, type LucideIcon } from 'lucide-react';
+import {
+	/* AlertTriangle, */ Bug,
+	MousePointerClick,
+	Users,
+	BarChart3,
+	type LucideIcon,
+} from 'lucide-react';
 
 // Depende de uma conexão ao vivo com o MCP server: nunca pode ser pré-renderizada em
 // build time (o servidor não existe/não está acessível durante o build, ex: no Vercel).
@@ -13,14 +24,13 @@ export const dynamic = 'force-dynamic';
 const PROJECT_SLUG = process.env.SENTRY_PROJECT_SLUG ?? '';
 
 export default async function OverviewPage() {
-	const [sentryResult, datadogResult, clarityResult, ga4Result] = await Promise.allSettled([
-		getSentrySummary(),
+	const [datadogResult, clarityResult, ga4Result] = await Promise.allSettled([
+		// getSentrySummary(), — ver comentário no import acima.
 		getDatadogErrorSummary(),
 		getClarityInsights(),
 		getGa4Summary(),
 	]);
 
-	const sentry = sentryResult.status === 'fulfilled' ? sentryResult.value : null;
 	const datadog = datadogResult.status === 'fulfilled' ? datadogResult.value : null;
 	const clarity = clarityResult.status === 'fulfilled' ? clarityResult.value : null;
 	const ga4 = ga4Result.status === 'fulfilled' ? ga4Result.value : null;
@@ -32,12 +42,13 @@ export default async function OverviewPage() {
 			<header>
 				<h1 className='text-xl font-semibold sm:text-2xl'>Orquestrador de Incidentes: Overview</h1>
 				<p className='text-muted-foreground text-sm'>
-					Sentry, Datadog, Clarity e GA4 via MCP · projeto{' '}
+					Datadog, Clarity e GA4 via MCP · projeto{' '}
 					<Badge variant='outline'>{PROJECT_SLUG || 'não configurado'}</Badge>
 				</p>
 			</header>
 
-			<section className='grid grid-cols-2 gap-4 md:grid-cols-5'>
+			<section className='grid grid-cols-2 gap-4 md:grid-cols-3'>
+				{/* Sentry temporariamente fora da Overview.
 				<KpiCard
 					href='/issues'
 					label='Erros não resolvidos'
@@ -54,6 +65,7 @@ export default async function OverviewPage() {
 					accent='text-rose-600 bg-rose-600/10 dark:text-rose-400'
 					borderColor='border-t-rose-500/70'
 				/>
+				*/}
 				<KpiCard
 					href='/datadog?view=errors'
 					label='Erros (Datadog)'
@@ -83,7 +95,8 @@ export default async function OverviewPage() {
 				/>
 			</section>
 
-			<section className='grid gap-6 lg:grid-cols-4'>
+			<section className='grid gap-6 lg:grid-cols-3'>
+				{/* Sentry temporariamente fora da Overview.
 				<Card className='border-t-4 border-t-rose-500/70'>
 					<CardHeader>
 						<div className='flex items-center gap-2'>
@@ -115,6 +128,7 @@ export default async function OverviewPage() {
 						)}
 					</CardContent>
 				</Card>
+				*/}
 
 				<Card className='border-t-4 border-t-sky-500/70'>
 					<CardHeader>
@@ -201,7 +215,9 @@ export default async function OverviewPage() {
 								<CardTitle>Conversão real (Google Analytics 4)</CardTitle>
 							</Link>
 						</div>
-						<CardDescription>Dado real de conversão, não é proxy de comportamento como o Clarity</CardDescription>
+						<CardDescription>
+							Dado real de conversão, não é proxy de comportamento como o Clarity
+						</CardDescription>
 					</CardHeader>
 					<CardContent>
 						{ga4 ? (
@@ -264,8 +280,10 @@ function KpiCard({
 					<CardTitle className='text-2xl sm:text-3xl'>
 						{unavailable ? (
 							<span className='text-muted-foreground text-sm sm:text-base'>indisponível</span>
+						) : value != null ? (
+							formatNumberBR(value)
 						) : (
-							(value != null ? formatNumberBR(value) : '-')
+							'-'
 						)}
 					</CardTitle>
 				</CardHeader>

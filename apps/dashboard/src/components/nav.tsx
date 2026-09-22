@@ -7,8 +7,9 @@ import { Activity, Menu, X } from 'lucide-react';
 
 const links = [
 	{ href: '/', label: 'Overview' },
-	{ href: '/issues', label: 'Sentry' },
-	{ href: '/issues/comparar', label: 'Comparar rotas' },
+	// Sentry temporariamente fora do menu.
+	// { href: '/issues', label: 'Sentry' },
+	// { href: '/issues/comparar', label: 'Comparar rotas' },
 	{ href: '/datadog', label: 'DataDog' },
 	{ href: '/insights', label: 'Clarity' },
 	{ href: '/insights/agendamento', label: 'Funil agendamento' },
